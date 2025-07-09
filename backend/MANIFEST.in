@@ -1,0 +1,31 @@
+# backend/MANIFEST.in
+# Include additional files in the package
+
+# Documentation
+include README.md
+include LICENSE
+include requirements.txt
+
+# Configuration files
+recursive-include config *.py
+recursive-include config *.json
+recursive-include config *.yaml
+recursive-include config *.yml
+
+# Scripts
+recursive-include scripts *.py
+
+# Data files (but exclude actual runtime data)
+include data/.gitkeep
+
+# Exclude development and runtime files
+exclude .git*
+exclude .pytest_cache
+exclude __pycache__
+recursive-exclude . __pycache__
+recursive-exclude . *.py[co]
+recursive-exclude . *.so
+recursive-exclude . .DS_Store
+recursive-exclude logs *
+recursive-exclude data *.db
+recursive-exclude data/covers *

@@ -1,0 +1,17 @@
+MANIFEST.in
+requirements.txt
+setup.py
+config/app_config.py
+src/dust_game_manager.egg-info/PKG-INFO
+src/dust_game_manager.egg-info/SOURCES.txt
+src/dust_game_manager.egg-info/dependency_links.txt
+src/dust_game_manager.egg-info/entry_points.txt
+src/dust_game_manager.egg-info/requires.txt
+src/dust_game_manager.egg-info/top_level.txt
+src/modules/__init__.py
+src/modules/database_manager.py
+src/modules/file_manager.py
+src/modules/game_manager.py
+src/modules/logger_config.py
+src/platforms/__init__.py
+src/platforms/dlsite_client.py

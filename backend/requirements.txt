@@ -1,0 +1,28 @@
+# Python dependencies for Dust Game Manager Backend
+
+# Web framework
+Flask==3.0.3
+Flask-CORS==4.0.1
+
+# DLSite integration
+dlsite-async==0.7.1
+
+# HTTP client for downloading images
+aiohttp==3.9.5
+aiofiles==23.2.0
+
+# Database (SQLite is built-in, but we might need additional tools)
+# No additional SQLite dependencies needed
+
+# Logging and utilities
+python-dateutil==2.9.0.post0
+
+# Development and testing (optional)
+pytest==8.2.2
+pytest-asyncio==0.23.7
+
+# Image processing (optional, for cover image handling)
+Pillow==10.3.0
+
+# Additional utilities
+pathlib2==2.3.7; python_version < "3.4"

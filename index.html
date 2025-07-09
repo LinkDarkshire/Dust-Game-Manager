@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dust - Game Manager</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles.css">
+    <!-- Font Awesome für Icons -->
+    <link rel="stylesheet" href="node_modules/@fortawesome/fontawesome-free/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <div id="sidebar">
+            <div class="logo">
+                <h1>DUST</h1>
+            </div>
+            <div class="nav-container">
+                <button class="nav-button active" data-page="library">
+                    <i class="fas fa-gamepad"></i> BIBLIOTHEK
+                </button>
+                <button class="nav-button" data-page="getgames">
+                    <i class="fas fa-shopping-cart"></i> SHOP
+                </button>
+                <button class="nav-button" data-page="community">
+                    <i class="fas fa-users"></i> COMMUNITY
+                </button>
+                <button class="nav-button" data-page="settings">
+                    <i class="fas fa-cog"></i> EINSTELLUNGEN
+                </button>
+            </div>
+            <div class="vpn-status-widget">
+                <div class="vpn-status-header">
+                    <span class="vpn-label">VPN Status</span>
+                    <div class="vpn-status-indicator">
+                        <div class="status-light" id="vpn-status-light"></div>
+                        <span class="vpn-status-text" id="vpn-status-text">Disconnected</span>
+                    </div>
+                </div>
+                <div class="vpn-controls">
+                    <button class="vpn-toggle-btn" id="vpn-toggle-btn" disabled>
+                        <i class="fas fa-power-off"></i>
+                        <span>Connect VPN</span>
+                    </button>
+                    <button class="vpn-config-btn" id="vpn-config-btn" title="VPN Konfiguration auswählen">
+                        <i class="fas fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <img src="assets/avatar.png" class="avatar" alt="User Avatar">
+                    <span class="username">Benutzer</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="content">
+            <!-- BIBLIOTHEK -->
+            <div id="library" class="page active">
+                <div class="toolbar">
+                    <div class="search-container">
+                        <input type="text" class="search-bar" placeholder="Suche in der Bibliothek...">
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                    <div class="filter-container">
+                        <select id="genre-filter" class="filter">
+                            <option value="all">Alle Genres</option>
+                        </select>
+                        <select id="source-filter" class="filter">
+                            <option value="all">Alle Quellen</option>
+                        </select>
+                        <button id="view-toggle" class="icon-button" title="Listen-Ansicht">
+                            <i class="fas fa-list"></i>
+                        </button>
+                        <button id="add-game-btn" class="primary-button">
+                            <i class="fas fa-plus"></i> Spiel hinzufügen
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="game-grid">
+                    <!-- Spiele werden dynamisch eingefügt -->
+                </div>
+            </div>
+
+            <!-- getgames -->
+            <div id="getgames" class="page">
+                <div class="placeholder-content">
+                    <i class="fas fa-shopping-cart placeholder-icon"></i>
+                    <h2>Get Games</h2>
+                    <p>Der Shop-Bereich wird in einer zukünftigen Version verfügbar sein.</p>
+                </div>
+            </div>
+
+            <!-- COMMUNITY -->
+            <div id="community" class="page">
+                <div class="placeholder-content">
+                    <i class="fas fa-users placeholder-icon"></i>
+                    <h2>Community</h2>
+                    <p>Der Community-Bereich wird in einer zukünftigen Version verfügbar sein.</p>
+                </div>
+            </div>
+
+            <!-- EINSTELLUNGEN -->
+            <div id="settings" class="page">
+                <div class="settings-header">
+                    <h2><i class="fas fa-cog"></i> Einstellungen</h2>
+                </div>
+                <div class="settings-section">
+                    <h3>Allgemein</h3>
+                    <div class="setting-item">
+                        <label for="launch-at-startup">Beim Systemstart starten</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="launch-at-startup">
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label for="close-to-tray">In den Tray minimieren</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="close-to-tray" checked>
+                            <span class="toggle-slider"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Erscheinungsbild</h3>
+                    <div class="setting-item">
+                        <label for="theme-select">Theme</label>
+                        <select id="theme-select" class="filter">
+                            <option value="dark">Dunkel</option>
+                            <option value="light">Hell</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Spieleverzeichnisse</h3>
+                    <div class="directory-list">
+                        <div class="directory-item">
+                            <span class="directory-path">C:\Programme\Steam\steamapps\common</span>
+                            <button class="icon-button small"><i class="fas fa-trash"></i></button>
+                        </div>
+                        <button class="secondary-button">
+                            <i class="fas fa-plus"></i> Verzeichnis hinzufügen
+                        </button>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Über</h3>
+                    <div class="about-info">
+                        <p><strong>Dust</strong></p>
+                        <p>Version 0.1.0</p>
+                        <p>An easy Gamemanager for different platforms</p>
+                        <p>&copy; 2025 Link Darkshire</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="renderer.js"></script>
+</body>
+</html>

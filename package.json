@@ -1,0 +1,81 @@
+{
+  "name": "dust-game-manager",
+  "version": "0.1.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --debug",
+    "start-backend": "cd backend && python main.py",
+    "setup-backend": "cd backend && pip install -r requirements.txt",
+    "setup": "npm install && npm run setup-backend",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish=never"
+  },
+  "keywords": [
+    "game-manager",
+    "launcher",
+    "dlsite",
+    "itch.io",
+    "electron",
+    "python",
+    "flask"
+  ],
+  "author": "Florian Heyer",
+  "license": "MIT",
+  "description": "Game Manager für verschiedene Spieleplattformen wie DLSite, Itch.io und Co. mit Python Backend.",
+  "devDependencies": {
+    "@types/electron": "^1.4.38",
+    "@types/node": "^22.15.3",
+    "electron": "^33.2.0",
+    "electron-builder": "^26.0.12",
+    "electron-devtools-installer": "^4.0.0",
+    "electron-reload": "^2.0.0-alpha.1",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.7.2",
+    "chart.js": "^4.4.9",
+    "node-fetch": "^2.7.0"
+  },
+  "build": {
+    "appId": "com.florianheyer.dust",
+    "productName": "Dust Game Manager",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!backend/venv/**/*",
+      "!backend/__pycache__/**/*",
+      "!backend/**/*.pyc",
+      "!logs/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!venv/**/*",
+          "!__pycache__/**/*",
+          "!**/*.pyc"
+        ]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png"
+    }
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
