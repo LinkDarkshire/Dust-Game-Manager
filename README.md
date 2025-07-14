@@ -180,7 +180,40 @@ npm run build
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International License**.
+
+### 📋 What this means:
+
+**✅ You CAN:**
+- Use the software for **personal, non-commercial purposes**
+- Share and redistribute the software
+- Modify and adapt the software
+- Create derivative works
+
+**❌ You CANNOT:**
+- Use the software for **commercial purposes** without explicit permission
+- Sell the software or charge for its use
+- Use it in commercial environments without authorization
+
+**📝 You MUST:**
+- Give appropriate credit to **Link Darkshire**
+- Provide a link to the original source
+- Indicate if changes were made
+- Include the license notice
+
+### 💼 Commercial Use
+
+For commercial licensing inquiries, please contact the author through the GitHub repository issues or discussions.
+
+**Commercial use includes but is not limited to:**
+- Selling the software or derivative works
+- Using in commercial environments
+- Incorporating into commercial products
+- Offering paid services based on this software
+
+---
+
+*For the complete license text, see the [LICENSE](LICENSE) file or visit [Creative Commons BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).*
 
 ## 🔗 Links
 
