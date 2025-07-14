@@ -1,6 +1,6 @@
 {
   "name": "dust-game-manager",
-  "version": "0.1.0",
+  "version": "0.2.1-dev",
   "description": "A universal game manager for multiple platforms",
   "main": "main.js",
   "scripts": {
@@ -12,7 +12,8 @@
     "setup": "node setup.js",
     "build": "electron-builder",
     "dist": "electron-builder --publish=never",
-    "clean": "rimraf dist build node_modules/.cache"
+    "clean": "rimraf dist build node_modules/.cache",
+    "update-version": "python update_version.py"
   },
   "keywords": [
     "game",
@@ -20,9 +21,11 @@
     "dlsite",
     "steam",
     "electron",
-    "gaming"
+    "gaming",
+    "universal",
+    "library"
   ],
-  "author": "Florian Heyer",
+  "author": "Link Darkshire",
   "license": "MIT",
   "devDependencies": {
     "electron": "^33.2.0",
@@ -48,7 +51,10 @@
       "!data/**/*",
       "!*.log",
       "!diagnose.js",
-      "!setup.js"
+      "!setup.js",
+      "!update_version.py",
+      "!tracking.html",
+      "!*.md"
     ],
     "extraFiles": [
       {

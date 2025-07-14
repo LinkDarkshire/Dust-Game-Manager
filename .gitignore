@@ -478,3 +478,4 @@ start_dev.ps1
 data/dust_games.db
 backend/tests/test_setup.py
 backend/tests/quick_test.py
+update_version.py
