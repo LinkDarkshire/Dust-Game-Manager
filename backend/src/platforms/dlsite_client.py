@@ -76,7 +76,7 @@ class DLSiteClient:
     
     async def get_game_info(self, dlsite_id: str, locale: str = "en_US") -> Dict[str, Any]:
         """
-        Get comprehensive game information from DLSite
+        Get comprehensive game information from DLSite with unified paths
         
         Args:
             dlsite_id (str): DLSite product ID (e.g., "RJ123456")
@@ -106,7 +106,7 @@ class DLSiteClient:
                 self.logger.info(f"Attempting to download cover image for {dlsite_id}")
                 cover_path = await self._download_cover_image(work)
                 if cover_path:
-                    game_info['coverImage'] = cover_path
+                    game_info['coverImage'] = cover_path  # This is now a relative path
                     self.logger.info(f"Cover image set to: {cover_path}")
                 else:
                     self.logger.warning(f"Failed to download cover image for {dlsite_id}")
@@ -659,13 +659,13 @@ class DLSiteClient:
     
     async def _download_cover_image(self, work) -> Optional[str]:
         """
-        Download cover image for a work
+        Download cover image for a work using centralized paths
         
         Args:
             work: DLSite Work object
             
         Returns:
-            Optional[str]: Local path to downloaded image, None if failed
+            Optional[str]: Relative path to downloaded image for database storage
         """
         try:
             if not hasattr(work, 'work_image') or not work.work_image:
@@ -675,6 +675,7 @@ class DLSiteClient:
             import aiohttp
             import aiofiles
             from pathlib import Path
+            from config.app_config import AppConfig
             
             # Prepare image URL
             image_url = work.work_image
@@ -685,8 +686,8 @@ class DLSiteClient:
             
             self.logger.info(f"Attempting to download image from: {image_url}")
             
-            # Create covers directory
-            covers_dir = Path('data/covers')
+            # Use centralized covers directory
+            covers_dir = Path(AppConfig.get_covers_dir())
             covers_dir.mkdir(parents=True, exist_ok=True)
             
             # Generate filename with proper extension
@@ -705,7 +706,8 @@ class DLSiteClient:
             # Skip if already exists and is not empty
             if local_path.exists() and local_path.stat().st_size > 0:
                 self.logger.debug(f"Cover image already exists: {local_path}")
-                return str(local_path)
+                # Return relative path for database storage
+                return AppConfig.get_relative_cover_path(filename)
             
             # Download image with proper headers
             headers = {
@@ -732,7 +734,8 @@ class DLSiteClient:
                             # Verify file was written and has content
                             if local_path.exists() and local_path.stat().st_size > 0:
                                 self.logger.info(f"Successfully downloaded cover image: {local_path} ({local_path.stat().st_size} bytes)")
-                                return str(local_path)
+                                # Return relative path for database storage
+                                return AppConfig.get_relative_cover_path(filename)
                             else:
                                 self.logger.error(f"Downloaded file is empty or doesn't exist: {local_path}")
                                 return None

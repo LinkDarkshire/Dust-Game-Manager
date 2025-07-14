@@ -11,23 +11,29 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 from .logger_config import setup_logger
+from config.app_config import AppConfig
 
 
 class DatabaseManager:
     """Manages SQLite database operations for game data"""
     
-    def __init__(self, db_path: str = "data/dust_games.db"):
+    def __init__(self, db_path: str = None):
         """
         Initialize the database manager
         
         Args:
-            db_path (str): Path to the SQLite database file
+            db_path (str): Path to the SQLite database file (optional, uses config default)
         """
-        self.db_path = Path(db_path)
+        # Use centralized config for database path
+        self.db_path = Path(db_path or AppConfig.get_database_path())
+        
+        # Ensure parent directory exists
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         
-        self.logger = setup_logger('DatabaseManager', 'database.log')
+        self.logger = setup_logger('DatabaseManager', Path(AppConfig.get_logs_dir()) / 'database.log')
         self.connection = None
+        
+        self.logger.info(f"Database manager initialized with path: {self.db_path}")
         
     def get_connection(self) -> sqlite3.Connection:
         """Get database connection with proper configuration"""
@@ -38,6 +44,7 @@ class DatabaseManager:
                 timeout=30.0
             )
             self.connection.row_factory = sqlite3.Row
+            self.logger.info(f"Database connection established: {self.db_path}")
             
         return self.connection
     
