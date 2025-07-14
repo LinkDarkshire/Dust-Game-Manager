@@ -1,3 +1,4 @@
+
 """
 Database Manager for Dust Game Manager
 Handles SQLite database operations for game storage and management.
@@ -11,7 +12,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 from .logger_config import setup_logger
-from config.app_config import AppConfig
+# Import the simple config constants
+from config.app_config import DATABASE_PATH, get_database_path, LOGS_DIR
 
 
 class DatabaseManager:
@@ -25,12 +27,12 @@ class DatabaseManager:
             db_path (str): Path to the SQLite database file (optional, uses config default)
         """
         # Use centralized config for database path
-        self.db_path = Path(db_path or AppConfig.get_database_path())
+        self.db_path = Path(db_path or get_database_path())
         
         # Ensure parent directory exists
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         
-        self.logger = setup_logger('DatabaseManager', Path(AppConfig.get_logs_dir()) / 'database.log')
+        self.logger = setup_logger('DatabaseManager', Path(LOGS_DIR) / 'database.log')
         self.connection = None
         
         self.logger.info(f"Database manager initialized with path: {self.db_path}")
