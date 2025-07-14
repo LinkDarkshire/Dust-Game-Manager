@@ -132,11 +132,11 @@ Dust-Game-Manager/
 
 ### Version 0.2.0 - DLSite Integration (Current)
 - [x] Complete DLSite platform support
-- [x] Enhanced metadata display
 - [x] Improved game detection
 - [x] Centralized data management
 - [x] Genre/WorkType field mapping
 - [x] Unified version management
+- [ ] Enhanced metadata display
 - [ ] UI refinements
 - [ ] Performance optimizations
 
@@ -226,7 +226,3 @@ For commercial licensing inquiries, please contact the author through the GitHub
 - **dlsite-async**: For DLSite API integration
 - **Electron**: For cross-platform desktop application framework
 - **SQLite**: For reliable local database storage
-
----
-
-**Version:** v0.2.0-dev | **Build Date:** 20250715 | **Author:** Link Darkshire
