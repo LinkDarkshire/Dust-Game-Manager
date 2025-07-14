@@ -52,7 +52,11 @@ class DatabaseManager:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Create games table
+            # Check if workImageUrl column exists and add it if missing
+            cursor.execute("PRAGMA table_info(games)")
+            columns = [column[1] for column in cursor.fetchall()]
+            
+            # Create games table with all required columns
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS games (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -98,9 +102,21 @@ class DatabaseManager:
                     musicians TEXT DEFAULT '[]',
                     file_size INTEGER DEFAULT 0,
                     page_count INTEGER DEFAULT 0,
-                    track_count INTEGER DEFAULT 0
+                    track_count INTEGER DEFAULT 0,
+                    
+                    -- Add workImageUrl column for compatibility
+                    work_image_url TEXT DEFAULT ''
                 )
             ''')
+            
+            # Add workImageUrl column if it doesn't exist (for existing databases)
+            if 'work_image_url' not in columns:
+                try:
+                    cursor.execute('ALTER TABLE games ADD COLUMN work_image_url TEXT DEFAULT ""')
+                    self.logger.info("Added work_image_url column to existing games table")
+                except sqlite3.OperationalError as e:
+                    if "duplicate column name" not in str(e).lower():
+                        self.logger.warning(f"Could not add work_image_url column: {e}")
             
             # Create tags table for better tag management
             cursor.execute('''
@@ -141,7 +157,7 @@ class DatabaseManager:
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_games_title ON games (title)')
             
             conn.commit()
-            self.logger.info("Database initialized successfully")
+            self.logger.info("Database initialized successfully with all required columns")
             return True
             
         except Exception as e:
@@ -364,7 +380,8 @@ class DatabaseManager:
             'voiceActors': 'voice_actors',
             'fileSize': 'file_size',
             'pageCount': 'page_count',
-            'trackCount': 'track_count'
+            'trackCount': 'track_count',
+            'workImageUrl': 'work_image_url'
         }
         
         for key, value in game_data.items():
