@@ -1,4 +1,3 @@
-
 """
 Database Manager for Dust Game Manager
 Handles SQLite database operations for game storage and management.
@@ -12,30 +11,23 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 from .logger_config import setup_logger
-# Import the simple config constants
-from config.app_config import DATABASE_PATH, get_database_path, LOGS_DIR
 
 
 class DatabaseManager:
     """Manages SQLite database operations for game data"""
     
-    def __init__(self, db_path: str = None):
+    def __init__(self, db_path: str = "data/dust_games.db"):
         """
         Initialize the database manager
         
         Args:
-            db_path (str): Path to the SQLite database file (optional, uses config default)
+            db_path (str): Path to the SQLite database file
         """
-        # Use centralized config for database path
-        self.db_path = Path(db_path or get_database_path())
-        
-        # Ensure parent directory exists
+        self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         
-        self.logger = setup_logger('DatabaseManager', Path(LOGS_DIR) / 'database.log')
+        self.logger = setup_logger('DatabaseManager', 'database.log')
         self.connection = None
-        
-        self.logger.info(f"Database manager initialized with path: {self.db_path}")
         
     def get_connection(self) -> sqlite3.Connection:
         """Get database connection with proper configuration"""
@@ -46,7 +38,6 @@ class DatabaseManager:
                 timeout=30.0
             )
             self.connection.row_factory = sqlite3.Row
-            self.logger.info(f"Database connection established: {self.db_path}")
             
         return self.connection
     
@@ -61,11 +52,7 @@ class DatabaseManager:
             conn = self.get_connection()
             cursor = conn.cursor()
             
-            # Check if workImageUrl column exists and add it if missing
-            cursor.execute("PRAGMA table_info(games)")
-            columns = [column[1] for column in cursor.fetchall()]
-            
-            # Create games table with all required columns
+            # Create games table
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS games (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -111,21 +98,9 @@ class DatabaseManager:
                     musicians TEXT DEFAULT '[]',
                     file_size INTEGER DEFAULT 0,
                     page_count INTEGER DEFAULT 0,
-                    track_count INTEGER DEFAULT 0,
-                    
-                    -- Add workImageUrl column for compatibility
-                    work_image_url TEXT DEFAULT ''
+                    track_count INTEGER DEFAULT 0
                 )
             ''')
-            
-            # Add workImageUrl column if it doesn't exist (for existing databases)
-            if 'work_image_url' not in columns:
-                try:
-                    cursor.execute('ALTER TABLE games ADD COLUMN work_image_url TEXT DEFAULT ""')
-                    self.logger.info("Added work_image_url column to existing games table")
-                except sqlite3.OperationalError as e:
-                    if "duplicate column name" not in str(e).lower():
-                        self.logger.warning(f"Could not add work_image_url column: {e}")
             
             # Create tags table for better tag management
             cursor.execute('''
@@ -166,7 +141,7 @@ class DatabaseManager:
             cursor.execute('CREATE INDEX IF NOT EXISTS idx_games_title ON games (title)')
             
             conn.commit()
-            self.logger.info("Database initialized successfully with all required columns")
+            self.logger.info("Database initialized successfully")
             return True
             
         except Exception as e:
@@ -389,8 +364,7 @@ class DatabaseManager:
             'voiceActors': 'voice_actors',
             'fileSize': 'file_size',
             'pageCount': 'page_count',
-            'trackCount': 'track_count',
-            'workImageUrl': 'work_image_url'
+            'trackCount': 'track_count'
         }
         
         for key, value in game_data.items():

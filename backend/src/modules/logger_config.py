@@ -1,92 +1,71 @@
 """
 Logger Configuration for Dust Game Manager
-Centralized logging setup with unified paths.
+Centralized logging setup with proper formatting and file handling.
 """
 
 import logging
-import sys
+import os
 from pathlib import Path
+from logging.handlers import RotatingFileHandler
 from typing import Optional
 
-def setup_logger(name: str, log_file: Optional[str] = None, level: str = "INFO") -> logging.Logger:
+
+def setup_logger(name: str, log_file: str, level: int = logging.INFO) -> logging.Logger:
     """
-    Set up a logger with console and file output using centralized paths
+    Setup a logger with both file and console handlers
     
     Args:
         name (str): Logger name
-        log_file (str, optional): Log file name (will be placed in centralized logs directory)
-        level (str): Logging level
+        log_file (str): Log file name
+        level (int): Logging level
         
     Returns:
-        logging.Logger: Configured logger
+        logging.Logger: Configured logger instance
     """
-    try:
-        # Import here to avoid circular imports
-        from config.app_config import AppConfig
-        
-        # Create logger
-        logger = logging.getLogger(name)
-        
-        # Avoid adding handlers multiple times
-        if logger.handlers:
-            return logger
-            
-        logger.setLevel(getattr(logging, level.upper(), logging.INFO))
-        
-        # Create formatter
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            datefmt='%H:%M:%S'
-        )
-        
-        # Console handler
-        console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(logging.INFO)
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
-        
-        # File handler (if log_file is provided)
-        if log_file:
-            # Use centralized logs directory
-            if isinstance(log_file, str) and not Path(log_file).is_absolute():
-                log_path = Path(AppConfig.get_logs_dir()) / log_file
-            else:
-                log_path = Path(log_file)
-            
-            # Ensure log directory exists
-            log_path.parent.mkdir(parents=True, exist_ok=True)
-            
-            file_handler = logging.FileHandler(log_path, encoding='utf-8')
-            file_handler.setLevel(logging.DEBUG)
-            file_handler.setFormatter(formatter)
-            logger.addHandler(file_handler)
-            
-            logger.info(f"Logger '{name}' initialized with file output: {log_path}")
-        else:
-            logger.info(f"Logger '{name}' initialized with console output only")
-        
+    # Create logs directory if it doesn't exist
+    logs_dir = Path('logs')
+    logs_dir.mkdir(exist_ok=True)
+    
+    # Create logger
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    
+    # Avoid adding multiple handlers if logger already exists
+    if logger.handlers:
         return logger
-        
-    except ImportError:
-        # Fallback if config is not available
-        logger = logging.getLogger(name)
-        if not logger.handlers:
-            logger.setLevel(getattr(logging, level.upper(), logging.INFO))
-            
-            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-            
-            console_handler = logging.StreamHandler(sys.stdout)
-            console_handler.setLevel(logging.INFO)
-            console_handler.setFormatter(formatter)
-            logger.addHandler(console_handler)
-            
-            if log_file:
-                file_handler = logging.FileHandler(log_file, encoding='utf-8')
-                file_handler.setLevel(logging.DEBUG)
-                file_handler.setFormatter(formatter)
-                logger.addHandler(file_handler)
-        
-        return logger
+    
+    # Create formatters
+    detailed_formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(funcName)s:%(lineno)d - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    simple_formatter = logging.Formatter(
+        '%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%H:%M:%S'
+    )
+    
+    # File handler with rotation
+    log_path = logs_dir / log_file
+    file_handler = RotatingFileHandler(
+        log_path,
+        maxBytes=10*1024*1024,  # 10MB
+        backupCount=5,
+        encoding='utf-8'
+    )
+    file_handler.setLevel(level)
+    file_handler.setFormatter(detailed_formatter)
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(simple_formatter)
+    
+    # Add handlers to logger
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    return logger
 
 
 def get_logger(name: str) -> logging.Logger:

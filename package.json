@@ -1,70 +1,64 @@
 {
   "name": "dust-game-manager",
-  "version": "0.2.1-dev",
-  "description": "A universal game manager for multiple platforms",
+  "version": "0.1.0",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "debug": "electron . --debug",
     "dev": "electron . --debug",
-    "test-backend": "python backend/scripts/main.py --debug",
-    "diagnose": "node diagnose.js",
-    "setup": "node setup.js",
+    "start-backend": "cd backend && python main.py",
+    "setup-backend": "cd backend && pip install -r requirements.txt",
+    "setup": "npm install && npm run setup-backend",
     "build": "electron-builder",
-    "dist": "electron-builder --publish=never",
-    "clean": "rimraf dist build node_modules/.cache",
-    "update-version": "python update_version.py"
+    "dist": "electron-builder --publish=never"
   },
   "keywords": [
-    "game",
-    "manager",
+    "game-manager",
+    "launcher",
     "dlsite",
-    "steam",
+    "itch.io",
     "electron",
-    "gaming",
-    "universal",
-    "library"
+    "python",
+    "flask"
   ],
   "author": "Link Darkshire",
   "license": "CC-BY-NC-4.0",
   "description": "Game Manager für verschiedene Spieleplattformen wie DLSite, Itch.io und Co. mit Python Backend.",
   "devDependencies": {
+    "@types/electron": "^1.4.38",
+    "@types/node": "^22.15.3",
     "electron": "^33.2.0",
-    "electron-builder": "^24.13.3",
-    "rimraf": "^5.0.5"
+    "electron-builder": "^26.0.12",
+    "electron-devtools-installer": "^4.0.0",
+    "electron-reload": "^2.0.0-alpha.1",
+    "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^6.5.2",
+    "@fortawesome/fontawesome-free": "^6.7.2",
+    "chart.js": "^4.4.9",
     "node-fetch": "^2.7.0"
   },
   "build": {
-    "appId": "com.linkdarkshire.dustgamemanager",
+    "appId": "com.florianheyer.dust",
     "productName": "Dust Game Manager",
     "directories": {
       "output": "dist"
     },
     "files": [
       "**/*",
-      "!backend/src/**/*.pyc",
-      "!backend/src/**/__pycache__",
-      "!backend/.pytest_cache",
-      "!logs/**/*",
-      "!data/**/*",
-      "!*.log",
-      "!diagnose.js",
-      "!setup.js",
-      "!update_version.py",
-      "!tracking.html",
-      "!*.md"
+      "!backend/venv/**/*",
+      "!backend/__pycache__/**/*",
+      "!backend/**/*.pyc",
+      "!logs/**/*"
     ],
-    "extraFiles": [
+    "extraResources": [
       {
         "from": "backend",
         "to": "backend",
         "filter": [
           "**/*",
-          "!**/*.pyc",
-          "!**/__pycache__"
+          "!venv/**/*",
+          "!__pycache__/**/*",
+          "!**/*.pyc"
         ]
       }
     ],
@@ -79,23 +73,9 @@
     "linux": {
       "target": "AppImage",
       "icon": "assets/icon.png"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
     }
   },
   "engines": {
-    "node": ">=16.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/LinkDarkshire/Dust-Game-Manager.git"
-  },
-  "bugs": {
-    "url": "https://github.com/LinkDarkshire/Dust-Game-Manager/issues"
-  },
-  "homepage": "https://github.com/LinkDarkshire/Dust-Game-Manager#readme"
+    "node": ">=14.0.0"
+  }
 }
