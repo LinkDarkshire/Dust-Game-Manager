@@ -24,7 +24,7 @@ if readme_file.exists():
 
 setup(
     name='dust-game-manager',
-    version='0.1.0',
+    version='0.2.1-dev',
     description='Dust Game Manager - Python Backend Server',
     long_description=long_description,
     long_description_content_type='text/markdown',
