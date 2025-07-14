@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -253,6 +253,45 @@ ipcMain.handle('get-app-info', () => {
         debug: process.argv.includes('--debug')
     };
 });
+
+ipcMain.handle('show-open-dialog', async (event, options) => {
+    try {
+        const mainWindow = getMainWindow(); // Use your existing getMainWindow function
+        
+        if (!mainWindow) {
+            console.error('No main window available for dialog');
+            return { canceled: true };
+        }
+        
+        const result = await dialog.showOpenDialog(mainWindow, {
+            title: options.title || 'Datei auswählen',
+            buttonLabel: options.buttonLabel || 'Auswählen',
+            filters: options.filters || [
+                { name: 'Alle Dateien', extensions: ['*'] }
+            ],
+            properties: options.properties || ['openFile']
+        });
+        
+        console.log('File dialog result:', result);
+        return result;
+        
+    } catch (error) {
+        console.error('Error in show-open-dialog:', error);
+        return { 
+            canceled: true, 
+            error: error.message 
+        };
+    }
+});
+
+/**
+ * Get the main application window
+ * @returns {BrowserWindow|null} The main window or null if not found
+ */
+function getMainWindow() {
+    const windows = BrowserWindow.getAllWindows();
+    return windows.find(win => !win.isDestroyed()) || null;
+}
 
 // Export for use in other modules
 module.exports = {

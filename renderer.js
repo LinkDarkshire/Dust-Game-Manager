@@ -991,13 +991,13 @@ class DustApp {
                      onerror="this.style.display='none'">
                 <div class="dlsite-info">
                     <h3>DLSite Spiel hinzufügen</h3>
-                    <p>Wählen Sie die Executable-Datei des Spiels aus. Die RJ/RE-Nummer wird automatisch erkannt.</p>
+                    <p>Wählen Sie die .exe Datei des DLSite-Spiels aus. Die RJ/RE-Nummer wird automatisch erkannt.</p>
                 </div>
             </div>
             
             <form id="dlsite-game-form">
                 <div class="form-group">
-                    <label for="dlsite-executable-path">Spiel-Executable auswählen *</label>
+                    <label for="dlsite-executable-path">Spiel-Executable (.exe) auswählen *</label>
                     <div class="file-selector">
                         <input type="text" id="dlsite-executable-path" name="executableFullPath" required readonly
                                placeholder="Klicken Sie auf 'Durchsuchen' um die .exe Datei auszuwählen">
@@ -1005,7 +1005,7 @@ class DustApp {
                             <i class="fas fa-folder-open"></i> Durchsuchen
                         </button>
                     </div>
-                    <small class="info-text">Wählen Sie die .exe Datei des DLSite-Spiels aus</small>
+                    <small class="info-text">Nur .exe Dateien werden unterstützt</small>
                 </div>
                 
                 <div id="dlsite-detection-result" class="detection-result" style="display: none;">
@@ -1036,7 +1036,7 @@ class DustApp {
     }
 
     /**
-     * Setup event handlers for DLSite form
+     * Setup event handlers for DLSite form (simplified)
      */
     setupDLSiteFormHandlers() {
         const browseBtn = document.getElementById('browse-dlsite-executable');
@@ -1044,103 +1044,130 @@ class DustApp {
         const detectBtn = document.getElementById('dlsite-detect-btn');
         const manualIdInput = document.getElementById('manual-dlsite-id');
 
-        // Browse for executable
-        browseBtn.addEventListener('click', () => {
-            this.browseDLSiteExecutable();
+        // Browse for executable - direct file dialog
+        browseBtn.addEventListener('click', async () => {
+            await this.browseDLSiteExecutable();
         });
 
-        // Detect RJ/RE number when path is selected
-        detectBtn.addEventListener('click', () => {
-            this.detectDLSiteId();
+        // Detect RJ/RE number when button is clicked
+        detectBtn.addEventListener('click', async () => {
+            await this.detectDLSiteId();
         });
 
         // Manual ID input handler
-        manualIdInput.addEventListener('input', (e) => {
-            const value = e.target.value.toUpperCase();
-            e.target.value = value;
+        if (manualIdInput) {
+            manualIdInput.addEventListener('input', (e) => {
+                const value = e.target.value.toUpperCase();
+                e.target.value = value;
 
-            if (this.validateDLSiteId(value)) {
-                this.fetchDLSiteInfoAndProceed(value, executableInput.value);
+                if (this.validateDLSiteId(value)) {
+                    this.fetchDLSiteInfoAndProceed(value, executableInput.value);
+                }
+            });
+        }
+
+        // Auto-detect when path changes
+        executableInput.addEventListener('change', async () => {
+            if (executableInput.value) {
+                detectBtn.disabled = false;
             }
         });
+    }
+
+    /**
+     * Validate DLSite ID format (fixed)
+     */
+    validateDLSiteId(id) {
+        if (!id) return false;
+
+        // Accept RJ123456, RE123456 format
+        const pattern = /^(RJ|RE)\d{6,}$/i;
+        return pattern.test(id.toUpperCase());
+    }
+
+    /**
+     * Parse executable path into directory and filename (enhanced)
+     */
+    parseExecutablePath(fullPath) {
+        if (!fullPath) {
+            return {
+                directory: '',
+                executable: ''
+            };
+        }
+
+        // Normalize path separators to forward slashes
+        const normalizedPath = fullPath.replace(/\\/g, '/');
+        const lastSlash = normalizedPath.lastIndexOf('/');
+
+        if (lastSlash === -1) {
+            // No path separator found, assume current directory
+            return {
+                directory: '.',
+                executable: fullPath
+            };
+        }
+
+        const directory = normalizedPath.substring(0, lastSlash).replace(/\//g, '\\'); // Convert back to Windows format
+        const executable = normalizedPath.substring(lastSlash + 1);
+
+        return {
+            directory: directory,
+            executable: executable
+        };
     }
 
     /**
      * Browse for DLSite executable
      */
     async browseDLSiteExecutable() {
-        // Create a more user-friendly file selection dialog
-        const modal = this.createModal('Executable-Datei auswählen', `
-        <div class="file-browser-dialog">
-            <div class="browser-instructions">
-                <h4><i class="fas fa-info-circle"></i> So wählen Sie die Datei aus:</h4>
-                <ol>
-                    <li>Navigieren Sie zu Ihrem Spieleordner im Windows Explorer</li>
-                    <li>Finden Sie die .exe Datei des Spiels</li>
-                    <li>Kopieren Sie den vollständigen Pfad (Shift + Rechtsklick → "Als Pfad kopieren")</li>
-                    <li>Fügen Sie den Pfad unten ein</li>
-                </ol>
-            </div>
-            
-            <div class="path-examples">
-                <h5>Beispiel-Pfade:</h5>
-                <div class="example-paths">
-                    <code>C:\\Games\\DLSite\\Circle\\Game [RJ123456]\\game.exe</code>
-                    <code>D:\\MyGames\\VisualNovel\\start.exe</code>
-                    <code>K:\\Downloads\\Game_Folder\\launcher.exe</code>
-                </div>
-            </div>
-            
-            <form id="file-path-form">
-                <div class="form-group">
-                    <label for="executable-path-input">Vollständiger Pfad zur .exe Datei:</label>
-                    <div class="path-input-container">
-                        <input type="text" id="executable-path-input" 
-                               placeholder="Pfad hier einfügen oder eingeben..."
-                               class="path-input">
-                        <button type="button" id="validate-path-btn" class="icon-button" title="Pfad prüfen">
-                            <i class="fas fa-check"></i>
-                        </button>
-                    </div>
-                    <div id="path-validation" class="path-validation" style="display: none;"></div>
-                </div>
-                
-                <div class="quick-browse-section">
-                    <h5>Oder schnell durchsuchen:</h5>
-                    <div class="quick-browse-buttons">
-                        <button type="button" class="quick-browse-btn" data-path="C:\\Games">
-                            <i class="fas fa-folder"></i> C:\\Games
-                        </button>
-                        <button type="button" class="quick-browse-btn" data-path="D:\\Games">
-                            <i class="fas fa-folder"></i> D:\\Games
-                        </button>
-                        <button type="button" class="quick-browse-btn" data-path="K:\\Games">
-                            <i class="fas fa-folder"></i> K:\\Games
-                        </button>
-                        <button type="button" class="quick-browse-btn" data-path="${this.getUserDownloadsPath()}">
-                            <i class="fas fa-download"></i> Downloads
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="file-type-info">
-                    <p><strong>Unterstützte Dateitypen:</strong> .exe, .bat, .cmd, .jar, .py</p>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="button" class="secondary-button" onclick="dustApp.closeModal()">
-                        Abbrechen
-                    </button>
-                    <button type="button" id="confirm-path-btn" class="primary-button" disabled>
-                        <i class="fas fa-check"></i> Pfad bestätigen
-                    </button>
-                </div>
-            </form>
-        </div>
-    `, 'file-browser-modal');
+        try {
+            // Request file dialog from main process
+            const result = await ipcRenderer.invoke('show-open-dialog', {
+                title: 'DLSite Spiel-Executable auswählen',
+                buttonLabel: 'Auswählen',
+                filters: [
+                    { name: 'Executable Dateien', extensions: ['exe'] },
+                    { name: 'Alle Dateien', extensions: ['*'] }
+                ],
+                properties: ['openFile']
+            });
 
-        this.setupFileBrowserHandlers();
+            if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+                console.log('File selection canceled');
+                return;
+            }
+
+            const selectedPath = result.filePaths[0];
+            console.log('Selected executable:', selectedPath);
+
+            // Validate the selected file
+            if (!selectedPath.toLowerCase().endsWith('.exe')) {
+                this.showError('Bitte wählen Sie eine .exe Datei aus.');
+                return;
+            }
+
+            // Set the path in the input field
+            const executableInput = document.getElementById('dlsite-executable-path');
+            if (executableInput) {
+                executableInput.value = selectedPath;
+
+                // Enable the detect button
+                const detectBtn = document.getElementById('dlsite-detect-btn');
+                if (detectBtn) {
+                    detectBtn.disabled = false;
+                }
+
+                // Auto-trigger RJ/RE detection
+                await this.detectDLSiteId();
+            }
+
+        } catch (error) {
+            console.error('Error opening file dialog:', error);
+            this.showError('Fehler beim Öffnen des Datei-Dialogs: ' + error.message);
+        }
     }
+
 
     /**
      * Setup handlers for the file browser dialog
@@ -1444,12 +1471,21 @@ class DustApp {
         </div>
     `;
 
-        // Extract RJ/RE number from path
-        const dlsiteIdPattern = /[RJ|RE]\d{6,}/gi;
+        // Extract RJ/RE number from path (fixed regex)
+        const dlsiteIdPattern = /(RJ|RE)\d{6,}/gi;
         const matches = executablePath.match(dlsiteIdPattern);
 
         if (matches && matches.length > 0) {
-            const dlsiteId = matches[0].toUpperCase();
+            let dlsiteId = matches[0].toUpperCase();
+
+            // Ensure the ID has the R prefix (fix for missing R)
+            if (dlsiteId.startsWith('J') && !dlsiteId.startsWith('RJ')) {
+                dlsiteId = 'R' + dlsiteId;
+            } else if (dlsiteId.startsWith('E') && !dlsiteId.startsWith('RE')) {
+                dlsiteId = 'R' + dlsiteId;
+            }
+
+            console.log('Detected DLSite ID:', dlsiteId);
 
             resultDiv.innerHTML = `
             <div class="detection-success">
@@ -1488,10 +1524,13 @@ class DustApp {
                 return;
             }
 
+            console.log(`Fetching DLSite info for: ${dlsiteId}`);
             this.showNotification(`Lade DLSite-Informationen für ${dlsiteId}...`, 'info');
 
             // Fetch from DLSite API
             const result = await this.apiRequest(`/api/dlsite/info/${dlsiteId}`);
+
+            console.log('DLSite API result:', result);
 
             if (result.success && result.gameInfo) {
                 const gameInfo = result.gameInfo;
@@ -1508,19 +1547,31 @@ class DustApp {
                     dlsiteId: dlsiteId
                 };
 
+                console.log('Final game data:', finalGameData);
+
                 this.closeModal();
                 this.showDLSiteConfirmationDialog(finalGameData);
 
             } else {
-                this.showError(result.message || 'Keine DLSite-Informationen gefunden');
+                console.warn('DLSite API returned no data:', result);
+                this.showError(result.message || `Keine DLSite-Informationen für ${dlsiteId} gefunden`);
+
                 // Show manual input as fallback
-                document.getElementById('dlsite-manual-id').style.display = 'block';
+                const manualDiv = document.getElementById('dlsite-manual-id');
+                if (manualDiv) {
+                    manualDiv.style.display = 'block';
+                }
             }
 
         } catch (error) {
             console.error('Error fetching DLSite info:', error);
             this.showError('Fehler beim Laden der DLSite-Informationen: ' + error.message);
-            document.getElementById('dlsite-manual-id').style.display = 'block';
+
+            // Show manual input as fallback
+            const manualDiv = document.getElementById('dlsite-manual-id');
+            if (manualDiv) {
+                manualDiv.style.display = 'block';
+            }
         } finally {
             this.setLoading(false);
         }
