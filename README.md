@@ -141,7 +141,7 @@ Dust-Game-Manager/
 
 ### Version 0.2.0 - DLSite Integration (Current)
 - [x] Complete DLSite platform support
-- [x] Enhanced metadata display
+- [ ] Enhanced metadata display
 - [x] Improved game detection
 - [x] Centralized data management
 - [x] Genre/WorkType field mapping
