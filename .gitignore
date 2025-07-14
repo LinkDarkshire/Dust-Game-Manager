@@ -474,3 +474,7 @@ backend/scripts/data/dust_games.db
 setup_backend.py
 start-debug.bat
 start.bat
+start_dev.ps1
+data/dust_games.db
+backend/tests/test_setup.py
+backend/tests/quick_test.py

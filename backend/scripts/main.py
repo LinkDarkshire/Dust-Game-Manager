@@ -2,6 +2,7 @@
 """
 Dust Game Manager - Python Backend Server
 Main entry point for the Flask API server that handles game management operations.
+Fixed version with proper imports and path handling.
 """
 
 import asyncio
@@ -15,15 +16,37 @@ backend_dir = Path(__file__).parent.parent  # Go up from scripts/ to backend/
 src_dir = backend_dir / "src"
 sys.path.insert(0, str(src_dir))
 
+# Add current directory to path as well
+sys.path.insert(0, str(backend_dir))
+
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-# Now we can import from src
-from modules.database_manager import DatabaseManager
-from modules.game_manager import GameManager
-from modules.file_manager import FileManager
-from modules.logger_config import setup_logger
-from platforms.dlsite_client import DLSiteClient
+# Import our modules with error handling
+try:
+    from modules.database_manager import DatabaseManager
+    from modules.game_manager import GameManager
+    from modules.file_manager import FileManager
+    from modules.logger_config import setup_logger
+    from platforms.dlsite_client import DLSiteClient
+except ImportError as e:
+    print(f"Import error: {e}")
+    print(f"Python path: {sys.path}")
+    print(f"Current directory: {os.getcwd()}")
+    print(f"Backend directory: {backend_dir}")
+    print(f"Src directory: {src_dir}")
+    
+    # Try alternative import paths
+    try:
+        sys.path.insert(0, str(Path(__file__).parent / "src"))
+        from modules.database_manager import DatabaseManager
+        from modules.game_manager import GameManager
+        from modules.file_manager import FileManager
+        from modules.logger_config import setup_logger
+        from platforms.dlsite_client import DLSiteClient
+    except ImportError as e2:
+        print(f"Alternative import also failed: {e2}")
+        raise
 
 
 class DustBackendServer:
@@ -63,9 +86,15 @@ class DustBackendServer:
         try:
             self.logger.info("Initializing backend managers...")
             
+            # Ensure data directory exists
+            data_dir = Path("data")
+            data_dir.mkdir(exist_ok=True)
+            
             # Initialize database manager
             self.db_manager = DatabaseManager()
-            self.db_manager.initialize_database()
+            if not self.db_manager.initialize_database():
+                self.logger.error("Failed to initialize database")
+                return False
             
             # Initialize file manager
             self.file_manager = FileManager()
@@ -85,6 +114,8 @@ class DustBackendServer:
             
         except Exception as e:
             self.logger.error(f"Error initializing managers: {e}")
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
             return False
     
     def _setup_routes(self):
@@ -103,6 +134,12 @@ class DustBackendServer:
         def get_games():
             """Get all games from database"""
             try:
+                if not self.game_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Game manager not initialized'
+                    }), 500
+                
                 games = self.game_manager.get_all_games()
                 return jsonify({
                     'success': True,
@@ -120,6 +157,12 @@ class DustBackendServer:
         def scan_games():
             """Scan for games in configured directories"""
             try:
+                if not self.game_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Game manager not initialized'
+                    }), 500
+                
                 result = self.game_manager.scan_games()
                 return jsonify(result)
             except Exception as e:
@@ -133,11 +176,18 @@ class DustBackendServer:
         def add_game():
             """Add a new game to the library"""
             try:
+                if not self.game_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Game manager not initialized'
+                    }), 500
+                
                 data = request.get_json()
                 game_folder = data.get('gameFolder')
                 executable_path = data.get('executablePath')
                 game_info = data.get('gameInfo', {})
                 
+                # Use asyncio.run for async function
                 result = asyncio.run(
                     self.game_manager.add_game_with_path(
                         game_info, game_folder, executable_path
@@ -155,6 +205,12 @@ class DustBackendServer:
         def launch_game(game_id):
             """Launch a specific game"""
             try:
+                if not self.game_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Game manager not initialized'
+                    }), 500
+                
                 result = self.game_manager.launch_game(game_id)
                 return jsonify(result)
             except Exception as e:
@@ -168,6 +224,12 @@ class DustBackendServer:
         def update_game(game_id):
             """Update game information"""
             try:
+                if not self.game_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Game manager not initialized'
+                    }), 500
+                
                 data = request.get_json()
                 updates = data.get('updates', {})
                 
@@ -184,6 +246,12 @@ class DustBackendServer:
         def delete_game(game_id):
             """Delete a game from the library"""
             try:
+                if not self.game_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Game manager not initialized'
+                    }), 500
+                
                 result = self.game_manager.delete_game(game_id)
                 return jsonify(result)
             except Exception as e:
@@ -197,6 +265,13 @@ class DustBackendServer:
         def get_dlsite_info(dlsite_id):
             """Get game information from DLSite"""
             try:
+                if not self.dlsite_client:
+                    return jsonify({
+                        'success': False,
+                        'message': 'DLSite client not initialized'
+                    }), 500
+                
+                # Use asyncio.run for async function
                 result = asyncio.run(
                     self.dlsite_client.get_game_info(dlsite_id)
                 )
@@ -212,10 +287,17 @@ class DustBackendServer:
         def import_games_from_folder():
             """Import multiple games from a folder"""
             try:
+                if not self.game_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Game manager not initialized'
+                    }), 500
+                
                 data = request.get_json()
                 folder_path = data.get('folderPath')
                 platform = data.get('platform', 'local')
                 
+                # Use asyncio.run for async function
                 result = asyncio.run(
                     self.game_manager.import_games_from_folder(folder_path, platform)
                 )
@@ -226,6 +308,21 @@ class DustBackendServer:
                     'success': False,
                     'message': f'Error importing games: {str(e)}'
                 }), 500
+        
+        # Add error handlers
+        @self.app.errorhandler(404)
+        def not_found(error):
+            return jsonify({
+                'success': False,
+                'message': 'API endpoint not found'
+            }), 404
+        
+        @self.app.errorhandler(500)
+        def internal_error(error):
+            return jsonify({
+                'success': False,
+                'message': 'Internal server error'
+            }), 500
     
     def run(self):
         """Start the Flask server"""
@@ -236,11 +333,17 @@ class DustBackendServer:
         self.logger.info(f"Starting Dust Backend Server on {self.host}:{self.port}")
         
         try:
+            # Configure Flask logging
+            if not self.debug:
+                log = logging.getLogger('werkzeug')
+                log.setLevel(logging.WARNING)
+            
             self.app.run(
                 host=self.host,
                 port=self.port,
                 debug=self.debug,
-                threaded=True
+                threaded=True,
+                use_reloader=False  # Disable reloader to avoid conflicts
             )
         except Exception as e:
             self.logger.error(f"Error starting server: {e}")
@@ -267,8 +370,15 @@ def main():
         debug=args.debug
     )
     
-    success = server.run()
-    sys.exit(0 if success else 1)
+    try:
+        success = server.run()
+        sys.exit(0 if success else 1)
+    except KeyboardInterrupt:
+        print("\nShutting down server...")
+        sys.exit(0)
+    except Exception as e:
+        print(f"Fatal error: {e}")
+        sys.exit(1)
 
 
 if __name__ == '__main__':
