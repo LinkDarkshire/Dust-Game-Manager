@@ -1,7 +1,12 @@
-# backend/src/platforms/dlsite_client.py
 """
 DLSite Client for Dust Game Manager
 Integration with the dlsite-async library for fetching game information.
+
+THIRD PARTY LIBRARY:
+This module uses dlsite-async library:
+Copyright (c) dlsite-async contributors
+Licensed under MIT License
+Source: https://github.com/bhrevol/dlsite-async
 """
 
 import asyncio

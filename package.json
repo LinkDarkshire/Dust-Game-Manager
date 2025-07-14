@@ -20,8 +20,8 @@
     "python",
     "flask"
   ],
-  "author": "Florian Heyer",
-  "license": "MIT",
+  "author": "Link Darkshire",
+  "license": "CC-BY-NC-4.0",
   "description": "Game Manager für verschiedene Spieleplattformen wie DLSite, Itch.io und Co. mit Python Backend.",
   "devDependencies": {
     "@types/electron": "^1.4.38",
