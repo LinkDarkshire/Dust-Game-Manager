@@ -2798,3 +2798,122 @@ select:focus-visible {
     margin-top: var(--spacing-xs);
     font-weight: 600;
 }
+
+/* VPN Status Light Colors */
+.status-light.connected {
+    background-color: #2ecc71 !important;
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.6);
+    animation: pulse-green 2s infinite;
+}
+
+.status-light.disconnected {
+    background-color: #e74c3c !important;
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.6);
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-green {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+@keyframes pulse-red {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* VPN Toggle Button States */
+.vpn-toggle-btn.connected {
+    background-color: rgba(46, 204, 113, 0.2);
+    border-color: #2ecc71;
+    color: #2ecc71;
+}
+
+.vpn-toggle-btn.disconnected {
+    background-color: rgba(231, 76, 60, 0.2);
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+.vpn-toggle-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* VPN Config Dialog */
+.vpn-config-dialog {
+    max-width: 600px;
+    width: 100%;
+}
+
+.vpn-config-section {
+    margin-bottom: 20px;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px solid rgba(102, 192, 244, 0.2);
+}
+
+.vpn-config-section h3 {
+    color: #66c0f4;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #66c0f4;
+    padding-bottom: 5px;
+}
+
+.vpn-configs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.vpn-config-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    border: 1px solid rgba(102, 192, 244, 0.3);
+}
+
+.config-info strong {
+    display: block;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+.config-info small {
+    color: #c7d5e0;
+}
+
+.no-configs-message {
+    text-align: center;
+    padding: 30px;
+    color: #c7d5e0;
+    background: rgba(231, 76, 60, 0.1);
+    border: 1px solid rgba(231, 76, 60, 0.3);
+    border-radius: 8px;
+}
+
+.no-configs-message code {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    color: #66c0f4;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .vpn-config-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .config-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}

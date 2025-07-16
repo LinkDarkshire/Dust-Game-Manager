@@ -61,6 +61,9 @@ class DustApp {
             // Load games
             await this.loadGames();
 
+            // VPN initialisieren
+            await this.initVPN();
+
             console.log('Dust Game Manager erfolgreich initialisiert');
             this.showNotification('Dust Game Manager gestartet', 'success');
 
@@ -568,7 +571,10 @@ class DustApp {
     async launchGame(gameId) {
         try {
             console.log(`Launching game ID: ${gameId}`);
-
+            const game = this.games.find(g => g.id === gameId);
+            if (game) {
+                await this.autoConnectVPNForDLSite(game);
+            }
             const response = await this.apiRequest(`/api/games/${gameId}/launch`, {
                 method: 'POST'
             });
@@ -2857,8 +2863,825 @@ class DustApp {
             this.showError('Fehler beim Initialisieren der Anwendung');
         }
     }
+    // Fügen Sie diese Methoden in Ihre bestehende DustApp Klasse ein:
+
+    /**
+     * Initialize VPN functionality
+     */
+    async initVPN() {
+        console.log('Initializing VPN functionality...');
+
+        // Get VPN UI elements
+        this.vpnToggleBtn = document.getElementById('vpn-toggle-btn');
+        this.vpnConfigBtn = document.getElementById('vpn-config-btn');
+        this.vpnStatusLight = document.getElementById('vpn-status-light');
+        this.vpnStatusText = document.getElementById('vpn-status-text');
+
+        if (!this.vpnToggleBtn || !this.vpnStatusLight || !this.vpnStatusText) {
+            console.error('VPN UI elements not found');
+            return;
+        }
+
+        // Setup event listeners
+        this.setupVPNEventListeners();
+
+        // Initialize VPN status
+        await this.updateVPNStatus();
+
+        // Start monitoring
+        this.startVPNMonitoring();
+
+        console.log('VPN functionality initialized');
+    }
+
+    /**
+     * Setup VPN event listeners
+     */
+    setupVPNEventListeners() {
+        if (this.vpnToggleBtn) {
+            this.vpnToggleBtn.addEventListener('click', async () => {
+                await this.toggleVPN();
+            });
+        }
+
+        if (this.vpnConfigBtn) {
+            this.vpnConfigBtn.addEventListener('click', async () => {
+                await this.showVPNConfigDialog();
+            });
+        }
+    }
+
+    /**
+     * Toggle VPN connection
+     */
+    async toggleVPN() {
+        try {
+            this.setVPNLoading(true);
+
+            const response = await this.apiRequest('/api/vpn/toggle', {
+                method: 'POST'
+            });
+
+            if (response.success) {
+                this.showNotification(response.message, 'success');
+                await this.updateVPNStatus();
+            } else {
+                this.showError(response.message || 'VPN toggle failed');
+            }
+
+        } catch (error) {
+            console.error('VPN toggle error:', error);
+            this.showError('VPN error: ' + error.message);
+        } finally {
+            this.setVPNLoading(false);
+        }
+    }
+
+    /**
+     * Update VPN status display
+     */
+    async updateVPNStatus() {
+        try {
+            const response = await this.apiRequest('/api/vpn/status');
+
+            if (response.success) {
+                this.updateVPNUI(response.status);
+                this.vpnStatus = response.status;
+            } else {
+                this.updateVPNUI({ connected: false });
+            }
+
+        } catch (error) {
+            console.error('VPN status error:', error);
+            this.updateVPNUI({ connected: false });
+        }
+    }
+
+    /**
+     * Update VPN UI elements
+     */
+    updateVPNUI(status) {
+        const isConnected = status.connected;
+
+        // Update status light
+        if (this.vpnStatusLight) {
+            this.vpnStatusLight.className = isConnected ?
+                'status-light connected' : 'status-light disconnected';
+        }
+
+        // Update status text  
+        if (this.vpnStatusText) {
+            this.vpnStatusText.textContent = isConnected ? 'Connected' : 'Disconnected';
+        }
+
+        // Update toggle button
+        if (this.vpnToggleBtn) {
+            const span = this.vpnToggleBtn.querySelector('span');
+            if (span) {
+                span.textContent = isConnected ? 'Disconnect VPN' : 'Connect VPN';
+            }
+
+            this.vpnToggleBtn.className = isConnected ?
+                'vpn-toggle-btn connected' : 'vpn-toggle-btn disconnected';
+
+            this.vpnToggleBtn.disabled = false;
+        }
+    }
+
+    /**
+     * Set VPN loading state
+     */
+    setVPNLoading(loading) {
+        if (!this.vpnToggleBtn) return;
+
+        if (loading) {
+            this.vpnToggleBtn.disabled = true;
+            const icon = this.vpnToggleBtn.querySelector('i');
+            if (icon) icon.className = 'fas fa-spinner fa-spin';
+            const span = this.vpnToggleBtn.querySelector('span');
+            if (span) span.textContent = 'Processing...';
+        } else {
+            this.vpnToggleBtn.disabled = false;
+            const icon = this.vpnToggleBtn.querySelector('i');
+            if (icon) icon.className = 'fas fa-power-off';
+        }
+    }
+
+    /**
+     * Show VPN configuration dialog
+     */
+    async showVPNConfigDialog() {
+        try {
+            const [configs, settings] = await Promise.all([
+                this.getVPNConfigs(),
+                this.getVPNSettings()
+            ]);
+
+            const modal = this.createModal('VPN Configuration', `
+            <div class="vpn-config-dialog">
+                <div class="vpn-config-section">
+                    <h3>VPN Settings</h3>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="auto-connect-dlsite" 
+                                   ${settings?.auto_connect_dlsite ? 'checked' : ''}>
+                            Activate VPN when adding DLSite Game
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="default-vpn-config">Standard VPN Konfiguration:</label>
+                        <select id="default-vpn-config">
+                            <option value="">Konfiguration auswählen...</option>
+                            ${configs.map(config => `
+                                <option value="${config.path}" 
+                                        ${config.path === settings?.current_config_file ? 'selected' : ''}>
+                                    ${config.name}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="vpn-config-section">
+                    <h3>Verfügbare VPN Konfigurationen</h3>
+                    
+                    ${configs.length === 0 ? `
+                        <div class="no-configs-message">
+                            <p>Keine VPN-Konfigurationsdateien gefunden.</p>
+                            <p>Bitte .ovpn Dateien in das <code>./vpn/</code> Verzeichnis kopieren.</p>
+                        </div>
+                    ` : `
+                        <div class="vpn-configs-list">
+                            ${configs.map(config => `
+                                <div class="vpn-config-item">
+                                    <div class="config-info">
+                                        <strong>${config.name}</strong>
+                                        <small>${config.server || 'Unbekannt'}:${config.port || '?'}</small>
+                                    </div>
+                                    <div class="config-actions">
+                                        <button class="secondary-button" onclick="dustApp.useVPNConfig('${config.path}')">
+                                            Verwenden
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `}
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" class="secondary-button" onclick="dustApp.closeModal()">
+                        Abbrechen
+                    </button>
+                    <button type="button" class="primary-button" onclick="dustApp.saveVPNSettings()">
+                        Speichern
+                    </button>
+                </div>
+            </div>
+        `);
+
+        } catch (error) {
+            console.error('VPN config dialog error:', error);
+            this.showError('Fehler beim Laden der VPN-Konfiguration');
+        }
+    }
+
+    /**
+     * Get VPN configurations
+     */
+    async getVPNConfigs() {
+        try {
+            const response = await this.apiRequest('/api/vpn/configs');
+            return response.success ? response.configs : [];
+        } catch (error) {
+            console.error('Error getting VPN configs:', error);
+            return [];
+        }
+    }
+
+    /**
+     * Get VPN settings
+     */
+    async getVPNSettings() {
+        try {
+            const response = await this.apiRequest('/api/vpn/settings');
+            return response.success ? response.settings : {};
+        } catch (error) {
+            console.error('Error getting VPN settings:', error);
+            return {};
+        }
+    }
+
+    /**
+     * Save VPN settings
+     */
+    async saveVPNSettings() {
+        try {
+            const autoConnect = document.getElementById('auto-connect-dlsite')?.checked || false;
+            const defaultConfig = document.getElementById('default-vpn-config')?.value || null;
+
+            const settings = { auto_connect_dlsite: autoConnect };
+            if (defaultConfig) {
+                settings.default_config_file = defaultConfig;
+            }
+
+            const response = await this.apiRequest('/api/vpn/settings', {
+                method: 'POST',
+                body: JSON.stringify(settings)
+            });
+
+            if (response.success) {
+                this.showNotification('VPN-Einstellungen gespeichert', 'success');
+                this.closeModal();
+            } else {
+                this.showError('Fehler beim Speichern der VPN-Einstellungen');
+            }
+
+        } catch (error) {
+            console.error('Error saving VPN settings:', error);
+            this.showError('Fehler beim Speichern der VPN-Einstellungen');
+        }
+    }
+
+    /**
+     * Use specific VPN config
+     */
+    async useVPNConfig(configPath) {
+        try {
+            this.setVPNLoading(true);
+
+            const response = await this.apiRequest('/api/vpn/connect', {
+                method: 'POST',
+                body: JSON.stringify({
+                    configFile: configPath,
+                    forceReconnect: true
+                })
+            });
+
+            if (response.success) {
+                this.showNotification('VPN verbunden', 'success');
+                this.closeModal();
+                await this.updateVPNStatus();
+            } else {
+                this.showError('VPN-Verbindung fehlgeschlagen');
+            }
+
+        } catch (error) {
+            console.error('Error using VPN config:', error);
+            this.showError('VPN-Fehler');
+        } finally {
+            this.setVPNLoading(false);
+        }
+    }
+
+    /**
+     * Auto-connect VPN for DLSite games
+     */
+    async autoConnectVPNForDLSite(game) {
+        // Check if VPN is needed for this game
+        if (!game || !(game.source === 'DLSite' || game.dlsiteId)) {
+            return true;
+        }
+
+        // Check if already connected
+        if (this.vpnStatus && this.vpnStatus.connected) {
+            return true;
+        }
+
+        // Check auto-connect setting
+        const settings = await this.getVPNSettings();
+        if (!settings.auto_connect_dlsite) {
+            return true; // Continue without VPN
+        }
+
+        // Auto-connect
+        this.showNotification('VPN wird für DLSite-Spiel aktiviert...', 'info');
+
+        try {
+            const response = await this.apiRequest('/api/vpn/connect', {
+                method: 'POST'
+            });
+
+            if (response.success) {
+                await this.updateVPNStatus();
+                return true;
+            } else {
+                this.showError('VPN-Auto-Verbindung fehlgeschlagen');
+                return false;
+            }
+        } catch (error) {
+            console.error('VPN auto-connect error:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Start VPN monitoring
+     */
+    startVPNMonitoring() {
+        // Update every 10 seconds
+        this.vpnMonitoringInterval = setInterval(async () => {
+            await this.updateVPNStatus();
+        }, 10000);
+    }
+
+    /**
+     * Stop VPN monitoring  
+     */
+    stopVPNMonitoring() {
+        if (this.vpnMonitoringInterval) {
+            clearInterval(this.vpnMonitoringInterval);
+            this.vpnMonitoringInterval = null;
+        }
+    }
+
+    /**
+     * Cleanup VPN functionality
+     */
+    cleanupVPN() {
+        this.stopVPNMonitoring();
+    }
 }
 
+// =============================================================================
+// VPN INTEGRATION - Fügen Sie diesen Code am Ende Ihrer renderer.js hinzu
+// =============================================================================
+
+// VPN functionality extension for DustApp
+Object.assign(DustApp.prototype, {
+    
+    /**
+     * Initialize VPN functionality
+     */
+    async initVPN() {
+        console.log('Initializing VPN functionality...');
+        
+        // Get VPN UI elements from the existing sidebar
+        this.vpnToggleBtn = document.getElementById('vpn-toggle-btn');
+        this.vpnConfigBtn = document.getElementById('vpn-config-btn');
+        this.vpnStatusLight = document.getElementById('vpn-status-light');
+        this.vpnStatusText = document.getElementById('vpn-status-text');
+        
+        if (!this.vpnToggleBtn || !this.vpnStatusLight || !this.vpnStatusText) {
+            console.error('VPN UI elements not found in sidebar');
+            return;
+        }
+        
+        // Setup event listeners for VPN controls
+        this.setupVPNEventListeners();
+        
+        // Initialize VPN status
+        await this.updateVPNStatus();
+        
+        // Start status monitoring
+        this.startVPNMonitoring();
+        
+        console.log('VPN functionality initialized successfully');
+    },
+    
+    /**
+     * Setup VPN event listeners
+     */
+    setupVPNEventListeners() {
+        // VPN Toggle Button (Power button)
+        if (this.vpnToggleBtn) {
+            this.vpnToggleBtn.addEventListener('click', async () => {
+                await this.toggleVPN();
+            });
+        }
+        
+        // VPN Config Button (Gear button)
+        if (this.vpnConfigBtn) {
+            this.vpnConfigBtn.addEventListener('click', async () => {
+                await this.showVPNConfigDialog();
+            });
+        }
+        
+        console.log('VPN event listeners attached');
+    },
+    
+    /**
+     * Toggle VPN connection
+     */
+    async toggleVPN() {
+        try {
+            console.log('Toggling VPN connection...');
+            this.setVPNLoading(true);
+            
+            const response = await this.apiRequest('/api/vpn/toggle', {
+                method: 'POST'
+            });
+            
+            if (response.success) {
+                this.showNotification(response.message, 'success');
+                await this.updateVPNStatus();
+            } else {
+                this.showError(response.message || 'VPN toggle failed');
+            }
+            
+        } catch (error) {
+            console.error('VPN toggle error:', error);
+            this.showError('VPN error: ' + error.message);
+        } finally {
+            this.setVPNLoading(false);
+        }
+    },
+    
+    /**
+     * Update VPN status display
+     */
+    async updateVPNStatus() {
+        try {
+            const response = await this.apiRequest('/api/vpn/status');
+            
+            if (response.success) {
+                this.updateVPNUI(response.status);
+                this.vpnStatus = response.status;
+            } else {
+                this.updateVPNUI({ connected: false });
+            }
+            
+        } catch (error) {
+            console.error('VPN status error:', error);
+            this.updateVPNUI({ connected: false });
+        }
+    },
+    
+    /**
+     * Update VPN UI elements
+     */
+    updateVPNUI(status) {
+        const isConnected = status.connected;
+        
+        // Update status light (red/green indicator)
+        if (this.vpnStatusLight) {
+            this.vpnStatusLight.className = isConnected ? 
+                'status-light connected' : 'status-light disconnected';
+        }
+        
+        // Update status text  
+        if (this.vpnStatusText) {
+            this.vpnStatusText.textContent = isConnected ? 'Connected' : 'Disconnected';
+        }
+        
+        // Update toggle button
+        if (this.vpnToggleBtn) {
+            const span = this.vpnToggleBtn.querySelector('span');
+            if (span) {
+                span.textContent = isConnected ? 'Disconnect VPN' : 'Connect VPN';
+            }
+            
+            // Update button styling
+            this.vpnToggleBtn.className = isConnected ? 
+                'vpn-toggle-btn connected' : 'vpn-toggle-btn disconnected';
+                
+            // Enable the button (it starts disabled in HTML)
+            this.vpnToggleBtn.disabled = false;
+        }
+        
+        console.log(`VPN UI updated: ${isConnected ? 'Connected' : 'Disconnected'}`);
+    },
+    
+    /**
+     * Set VPN loading state
+     */
+    setVPNLoading(loading) {
+        if (!this.vpnToggleBtn) return;
+        
+        if (loading) {
+            this.vpnToggleBtn.disabled = true;
+            const icon = this.vpnToggleBtn.querySelector('i');
+            if (icon) icon.className = 'fas fa-spinner fa-spin';
+            const span = this.vpnToggleBtn.querySelector('span');
+            if (span) span.textContent = 'Processing...';
+        } else {
+            this.vpnToggleBtn.disabled = false;
+            const icon = this.vpnToggleBtn.querySelector('i');
+            if (icon) icon.className = 'fas fa-power-off';
+        }
+    },
+    
+    /**
+     * Show VPN configuration dialog
+     */
+    async showVPNConfigDialog() {
+        try {
+            console.log('Opening VPN configuration dialog...');
+            
+            const [configs, settings] = await Promise.all([
+                this.getVPNConfigs(),
+                this.getVPNSettings()
+            ]);
+            
+            const modal = this.createModal('VPN Konfiguration', `
+                <div class="vpn-config-dialog">
+                    <div class="vpn-config-section">
+                        <h3>VPN Einstellungen</h3>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="auto-connect-dlsite" 
+                                       ${settings?.auto_connect_dlsite ? 'checked' : ''}>
+                                VPN automatisch für DLSite Spiele aktivieren
+                            </label>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="default-vpn-config">Standard VPN Konfiguration:</label>
+                            <select id="default-vpn-config">
+                                <option value="">Konfiguration auswählen...</option>
+                                ${configs.map(config => `
+                                    <option value="${config.path}" 
+                                            ${config.path === settings?.current_config_file ? 'selected' : ''}>
+                                        ${config.name}
+                                    </option>
+                                `).join('')}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="vpn-config-section">
+                        <h3>Verfügbare VPN Konfigurationen</h3>
+                        
+                        ${configs.length === 0 ? `
+                            <div class="no-configs-message">
+                                <p>❌ Keine VPN-Konfigurationsdateien gefunden.</p>
+                                <p>Bitte .ovpn Dateien in das <code>./vpn/</code> Verzeichnis kopieren und die Anwendung neu starten.</p>
+                                <p><strong>Aktuelle VPN-Verzeichnis:</strong> <code>${settings?.config_dir || './vpn/'}</code></p>
+                            </div>
+                        ` : `
+                            <div class="vpn-configs-list">
+                                ${configs.map(config => `
+                                    <div class="vpn-config-item">
+                                        <div class="config-info">
+                                            <strong>${config.name}</strong>
+                                            <small>${config.server || 'Unbekannt'}:${config.port || '?'} (${config.protocol || 'UDP'})</small>
+                                        </div>
+                                        <div class="config-actions">
+                                            <button class="secondary-button" onclick="dustApp.useVPNConfig('${config.path}')">
+                                                Jetzt verwenden
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `}
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" class="secondary-button" onclick="dustApp.closeModal()">
+                            Abbrechen
+                        </button>
+                        <button type="button" class="primary-button" onclick="dustApp.saveVPNSettings()">
+                            Einstellungen speichern
+                        </button>
+                    </div>
+                </div>
+            `);
+            
+        } catch (error) {
+            console.error('VPN config dialog error:', error);
+            this.showError('Fehler beim Laden der VPN-Konfiguration');
+        }
+    },
+    
+    /**
+     * Get VPN configurations
+     */
+    async getVPNConfigs() {
+        try {
+            const response = await this.apiRequest('/api/vpn/configs');
+            return response.success ? response.configs : [];
+        } catch (error) {
+            console.error('Error getting VPN configs:', error);
+            return [];
+        }
+    },
+    
+    /**
+     * Get VPN settings
+     */
+    async getVPNSettings() {
+        try {
+            const response = await this.apiRequest('/api/vpn/settings');
+            return response.success ? response.settings : {};
+        } catch (error) {
+            console.error('Error getting VPN settings:', error);
+            return {};
+        }
+    },
+    
+    /**
+     * Save VPN settings
+     */
+    async saveVPNSettings() {
+        try {
+            const autoConnect = document.getElementById('auto-connect-dlsite')?.checked || false;
+            const defaultConfig = document.getElementById('default-vpn-config')?.value || null;
+            
+            const settings = { auto_connect_dlsite: autoConnect };
+            if (defaultConfig) {
+                settings.default_config_file = defaultConfig;
+            }
+            
+            const response = await this.apiRequest('/api/vpn/settings', {
+                method: 'POST',
+                body: JSON.stringify(settings)
+            });
+            
+            if (response.success) {
+                this.showNotification('VPN-Einstellungen gespeichert', 'success');
+                this.closeModal();
+            } else {
+                this.showError('Fehler beim Speichern der VPN-Einstellungen');
+            }
+            
+        } catch (error) {
+            console.error('Error saving VPN settings:', error);
+            this.showError('Fehler beim Speichern der VPN-Einstellungen');
+        }
+    },
+    
+    /**
+     * Use specific VPN config
+     */
+    async useVPNConfig(configPath) {
+        try {
+            this.setVPNLoading(true);
+            
+            const response = await this.apiRequest('/api/vpn/connect', {
+                method: 'POST',
+                body: JSON.stringify({
+                    configFile: configPath,
+                    forceReconnect: true
+                })
+            });
+            
+            if (response.success) {
+                this.showNotification('VPN verbunden', 'success');
+                this.closeModal();
+                await this.updateVPNStatus();
+            } else {
+                this.showError('VPN-Verbindung fehlgeschlagen: ' + response.message);
+            }
+            
+        } catch (error) {
+            console.error('Error using VPN config:', error);
+            this.showError('VPN-Fehler');
+        } finally {
+            this.setVPNLoading(false);
+        }
+    },
+    
+    /**
+     * Auto-connect VPN for DLSite games
+     */
+    async autoConnectVPNForDLSite(game) {
+        // Check if VPN is needed for this game
+        if (!game || !(game.source === 'DLSite' || game.dlsiteId)) {
+            return true;
+        }
+        
+        // Check if already connected
+        if (this.vpnStatus && this.vpnStatus.connected) {
+            return true;
+        }
+        
+        // Check auto-connect setting
+        const settings = await this.getVPNSettings();
+        if (!settings.auto_connect_dlsite) {
+            return true; // Continue without VPN
+        }
+        
+        // Auto-connect
+        this.showNotification('VPN wird für DLSite-Spiel aktiviert...', 'info');
+        
+        try {
+            const response = await this.apiRequest('/api/vpn/connect', {
+                method: 'POST'
+            });
+            
+            if (response.success) {
+                this.showNotification('VPN für DLSite aktiviert', 'success');
+                await this.updateVPNStatus();
+                return true;
+            } else {
+                this.showError('VPN-Auto-Verbindung fehlgeschlagen');
+                return false;
+            }
+        } catch (error) {
+            console.error('VPN auto-connect error:', error);
+            return false;
+        }
+    },
+    
+    /**
+     * Start VPN monitoring
+     */
+    startVPNMonitoring() {
+        // Update every 10 seconds
+        this.vpnMonitoringInterval = setInterval(async () => {
+            await this.updateVPNStatus();
+        }, 10000);
+        
+        console.log('VPN status monitoring started');
+    },
+    
+    /**
+     * Stop VPN monitoring  
+     */
+    stopVPNMonitoring() {
+        if (this.vpnMonitoringInterval) {
+            clearInterval(this.vpnMonitoringInterval);
+            this.vpnMonitoringInterval = null;
+        }
+    },
+    
+    /**
+     * Cleanup VPN functionality
+     */
+    cleanupVPN() {
+        this.stopVPNMonitoring();
+        console.log('VPN functionality cleaned up');
+    }
+});
+
+// Override the original init method to include VPN initialization
+const originalDustAppInit = DustApp.prototype.init;
+DustApp.prototype.init = async function() {
+    // Call original init first
+    await originalDustAppInit.call(this);
+    
+    // Then initialize VPN
+    await this.initVPN();
+};
+
+// Override game launching to include VPN check for DLSite games
+const originalLaunchGame = DustApp.prototype.launchGame;
+DustApp.prototype.launchGame = async function(gameId) {
+    const game = this.games.find(g => g.id === gameId);
+    if (game) {
+        // Check if VPN should be auto-connected for DLSite games
+        await this.autoConnectVPNForDLSite(game);
+    }
+    
+    // Call original launch method
+    return await originalLaunchGame.call(this, gameId);
+};
+
+// Override DLSite info fetching to include VPN check
+const originalFetchDLSiteInfo = DustApp.prototype.fetchDLSiteInfoAndProceed;
+DustApp.prototype.fetchDLSiteInfoAndProceed = async function(dlsiteId, executablePath) {
+    // Auto-connect VPN for DLSite info fetching
+    await this.autoConnectVPNForDLSite({ source: 'DLSite' });
+    
+    // Call original method
+    return await originalFetchDLSiteInfo.call(this, dlsiteId, executablePath);
+};
+
+console.log('VPN Frontend Integration loaded');
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.dustApp = new DustApp();

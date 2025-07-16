@@ -1,28 +1,51 @@
-# Python dependencies for Dust Game Manager Backend
+# Python Requirements for Dust Game Manager with VPN Support
+# Add these dependencies to your existing requirements.txt
 
-# Web framework
-Flask==3.0.3
-Flask-CORS==4.0.1
+# Existing requirements (keeping these)
+flask>=2.3.0
+flask-cors>=4.0.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+aiohttp>=3.8.0
+aiofiles>=23.0.0
+python-dotenv>=1.0.0
 
-# DLSite integration
-dlsite-async==0.7.1
+# New VPN-related requirements
+psutil>=5.9.0          # For process monitoring and management
+python-openvpn>=0.1.0  # OpenVPN Python library (if available)
+asyncio-subprocess>=0.1.0  # Enhanced subprocess support for async operations
 
-# HTTP client for downloading images
-aiohttp==3.9.5
-aiofiles==23.2.0
+# Alternative VPN management libraries (choose one that works best)
+openvpn-api>=0.3.0   # Alternative OpenVPN management library
+# pexpect>=4.8.0       # For interactive process management on Unix systems
+# pywin32>=306         # For Windows-specific process management (Windows only)
 
-# Database (SQLite is built-in, but we might need additional tools)
-# No additional SQLite dependencies needed
+# Enhanced logging and monitoring
+watchdog>=3.0.0        # File system monitoring for config changes
+schedule>=1.2.0        # Task scheduling for periodic status checks
 
-# Logging and utilities
-python-dateutil==2.9.0.post0
+# Network utilities
+netifaces>=0.11.0      # Network interface information
+ipaddress>=1.0.23      # IP address manipulation (usually built-in)
 
-# Development and testing (optional)
-pytest==8.2.2
-pytest-asyncio==0.23.7
+# Configuration and settings management
+configparser>=5.3.0    # Configuration file parsing (usually built-in)
+json5>=0.9.0          # Enhanced JSON parsing
 
-# Image processing (optional, for cover image handling)
-Pillow==10.3.0
+# Error handling and retry logic
+tenacity>=8.2.0        # Retry decorator with exponential backoff
+backoff>=2.2.0         # Alternative retry library
 
-# Additional utilities
-pathlib2==2.3.7; python_version < "3.4"
+# Optional: GUI components for settings (if needed)
+# tkinter                # Usually comes with Python
+# PyQt5>=5.15.0         # Alternative GUI framework
+# wxPython>=4.2.0       # Another GUI option
+
+# Development and testing
+pytest>=7.4.0          # Testing framework
+pytest-asyncio>=0.21.0 # Async testing support
+mock>=5.1.0            # Mocking for tests
+
+# Documentation
+sphinx>=7.1.0          # Documentation generation
+sphinx-rtd-theme>=1.3.0 # ReadTheDocs theme

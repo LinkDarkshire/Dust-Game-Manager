@@ -40,8 +40,10 @@ class VPNManager:
         if config_dir:
             self.config_dir = config_dir
         else:
-            # Use vpn directory in project root
-            project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+            # Find project root by going up from current file location
+            current_file = os.path.abspath(__file__)
+            # Go up from backend/src/modules/vpn_manager.py to project root
+            project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_file))))
             self.config_dir = os.path.join(project_root, 'vpn')
         
         self.auto_connect_dlsite = False
@@ -55,7 +57,7 @@ class VPNManager:
         # Ensure config directory exists
         os.makedirs(self.config_dir, exist_ok=True)
         
-        self.logger.info("VPN Manager initialized")
+        self.logger.info(f"VPN Manager initialized with config directory: {self.config_dir}")
         
         # Load settings on initialization
         self.load_settings()
