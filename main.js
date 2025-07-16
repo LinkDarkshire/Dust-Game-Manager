@@ -108,6 +108,57 @@ async function waitForBackend(maxAttempts = 30) {
 }
 
 /**
+ * Gracefully shutdown VPN connections via backend API
+ */
+async function shutdownVPNConnections() {
+    try {
+        console.log('Shutting down VPN connections...');
+        
+        const fetch = require('node-fetch');
+        
+        // First check if VPN is connected
+        const statusResponse = await fetch(`http://127.0.0.1:${BACKEND_PORT}/api/vpn/status`, {
+            timeout: 3000
+        });
+        
+        if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            
+            if (statusData.success && statusData.status && statusData.status.connected) {
+                console.log('VPN is connected, disconnecting...');
+                
+                // Disconnect VPN
+                const disconnectResponse = await fetch(`http://127.0.0.1:${BACKEND_PORT}/api/vpn/disconnect`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    timeout: 10000 // Give more time for VPN disconnection
+                });
+                
+                if (disconnectResponse.ok) {
+                    const disconnectData = await disconnectResponse.json();
+                    if (disconnectData.success) {
+                        console.log('VPN disconnected successfully');
+                    } else {
+                        console.warn('VPN disconnection failed:', disconnectData.message);
+                    }
+                } else {
+                    console.warn('Failed to call VPN disconnect API');
+                }
+            } else {
+                console.log('VPN is not connected, no disconnection needed');
+            }
+        } else {
+            console.warn('Could not check VPN status during shutdown');
+        }
+    } catch (error) {
+        console.error('Error during VPN shutdown:', error);
+        // Don't throw the error, just log it as we're shutting down anyway
+    }
+}
+
+/**
  * Create the main application window
  */
 function createWindow() {
@@ -141,6 +192,26 @@ function createWindow() {
     mainWindow.on('closed', () => {
         console.log('Main window closed');
         mainWindow = null;
+    });
+
+    // Handle window close attempt (before closed)
+    mainWindow.on('close', async (event) => {
+        console.log('Main window close event triggered');
+        
+        // Prevent immediate close to allow VPN cleanup
+        event.preventDefault();
+        
+        try {
+            // Perform VPN cleanup first
+            await shutdownVPNConnections();
+            
+            // Now allow the window to close
+            mainWindow.destroy();
+        } catch (error) {
+            console.error('Error during window close cleanup:', error);
+            // Force close anyway
+            mainWindow.destroy();
+        }
     });
 
     // Development tools in debug mode
@@ -202,22 +273,53 @@ app.on('window-all-closed', () => {
     }
 });
 
-app.on('before-quit', () => {
+// Enhanced before-quit handler with VPN cleanup
+app.on('before-quit', async (event) => {
     console.log('Application quitting, cleaning up...');
     
-    // Terminate Python backend
-    if (pythonProcess && !pythonProcess.killed) {
-        console.log('Terminating Python backend...');
-        pythonProcess.kill('SIGTERM');
+    // Prevent immediate quit to allow cleanup
+    event.preventDefault();
+    
+    try {
+        // Clean up VPN connections first
+        await shutdownVPNConnections();
         
-        // Force kill after 5 seconds if it doesn't terminate gracefully
-        setTimeout(() => {
+        // Terminate Python backend
+        if (pythonProcess && !pythonProcess.killed) {
+            console.log('Terminating Python backend...');
+            pythonProcess.kill('SIGTERM');
+            
+            // Wait a moment for graceful shutdown
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Force kill if still running
             if (pythonProcess && !pythonProcess.killed) {
                 console.log('Force killing Python backend...');
                 pythonProcess.kill('SIGKILL');
             }
-        }, 5000);
+        }
+        
+        console.log('Cleanup completed, exiting application');
+        
+    } catch (error) {
+        console.error('Error during cleanup:', error);
+    } finally {
+        // Force quit after cleanup
+        app.exit(0);
     }
+});
+
+// Handle unexpected shutdowns
+process.on('SIGINT', async () => {
+    console.log('Received SIGINT, shutting down gracefully...');
+    await shutdownVPNConnections();
+    app.quit();
+});
+
+process.on('SIGTERM', async () => {
+    console.log('Received SIGTERM, shutting down gracefully...');
+    await shutdownVPNConnections();
+    app.quit();
 });
 
 /**
@@ -241,6 +343,49 @@ ipcMain.handle('backend-status', async () => {
     } catch (error) {
         console.log(`Backend status check failed: ${error.message}`);
         return false;
+    }
+});
+
+// VPN-specific IPC handlers
+ipcMain.handle('vpn-status', async () => {
+    try {
+        const fetch = require('node-fetch');
+        const response = await fetch(`http://127.0.0.1:${BACKEND_PORT}/api/vpn/status`, {
+            timeout: 3000
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            return data;
+        } else {
+            return { success: false, message: 'Failed to get VPN status' };
+        }
+    } catch (error) {
+        console.log(`VPN status check failed: ${error.message}`);
+        return { success: false, message: error.message };
+    }
+});
+
+ipcMain.handle('vpn-toggle', async () => {
+    try {
+        const fetch = require('node-fetch');
+        const response = await fetch(`http://127.0.0.1:${BACKEND_PORT}/api/vpn/toggle`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            timeout: 15000 // VPN operations can take longer
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            return data;
+        } else {
+            return { success: false, message: 'Failed to toggle VPN' };
+        }
+    } catch (error) {
+        console.log(`VPN toggle failed: ${error.message}`);
+        return { success: false, message: error.message };
     }
 });
 

@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """
-Dust Game Manager - Python Backend Server
-Main entry point for the Flask API server that handles game management operations.
-Fixed version with proper imports and path handling.
+Dust Game Manager - Python Backend Server with VPN Integration
+Enhanced version with OpenVPN support for accessing geo-restricted gaming platforms.
 """
 
 import asyncio
@@ -28,6 +27,7 @@ try:
     from modules.game_manager import GameManager
     from modules.file_manager import FileManager
     from modules.logger_config import setup_logger
+    from modules.vpn_manager import VPNManager  # New VPN module
     from platforms.dlsite_client import DLSiteClient
 except ImportError as e:
     print(f"Import error: {e}")
@@ -43,6 +43,7 @@ except ImportError as e:
         from modules.game_manager import GameManager
         from modules.file_manager import FileManager
         from modules.logger_config import setup_logger
+        from modules.vpn_manager import VPNManager
         from platforms.dlsite_client import DLSiteClient
     except ImportError as e2:
         print(f"Alternative import also failed: {e2}")
@@ -50,11 +51,11 @@ except ImportError as e:
 
 
 class DustBackendServer:
-    """Main backend server class for Dust Game Manager"""
+    """Main backend server class for Dust Game Manager with VPN integration"""
     
     def __init__(self, host='127.0.0.1', port=5000, debug=False):
         """
-        Initialize the Dust Backend Server
+        Initialize the Dust Backend Server with VPN support
         
         Args:
             host (str): Server host address
@@ -77,12 +78,13 @@ class DustBackendServer:
         self.game_manager = None
         self.file_manager = None
         self.dlsite_client = None
+        self.vpn_manager = None  # New VPN manager
         
         # Setup routes
         self._setup_routes()
         
     def initialize_managers(self):
-        """Initialize all manager instances"""
+        """Initialize all manager instances including VPN manager"""
         try:
             self.logger.info("Initializing backend managers...")
             
@@ -98,6 +100,10 @@ class DustBackendServer:
             
             # Initialize file manager
             self.file_manager = FileManager()
+            
+            # Initialize VPN manager
+            self.vpn_manager = VPNManager()
+            self.logger.info("VPN Manager initialized")
             
             # Initialize DLSite client
             self.dlsite_client = DLSiteClient()
@@ -119,15 +125,19 @@ class DustBackendServer:
             return False
     
     def _setup_routes(self):
-        """Setup all API routes"""
+        """Setup all API routes including VPN endpoints"""
         
+        # Existing routes (status, games, etc.)
         @self.app.route('/api/status', methods=['GET'])
         def get_status():
-            """Health check endpoint"""
+            """Health check endpoint with VPN status"""
+            vpn_status = self.vpn_manager.get_status() if self.vpn_manager else {'connected': False}
+            
             return jsonify({
                 'status': 'online',
                 'message': 'Dust Game Manager Backend is running',
-                'version': '0.1.0'
+                'version': '0.2.0',
+                'vpn': vpn_status
             })
         
         @self.app.route('/api/games', methods=['GET'])
@@ -174,7 +184,7 @@ class DustBackendServer:
         
         @self.app.route('/api/games/add', methods=['POST'])
         def add_game():
-            """Add a new game to the library"""
+            """Add a new game to the library with auto-VPN for DLSite"""
             try:
                 if not self.game_manager:
                     return jsonify({
@@ -186,6 +196,12 @@ class DustBackendServer:
                 game_folder = data.get('gameFolder')
                 executable_path = data.get('executablePath')
                 game_info = data.get('gameInfo', {})
+                
+                # Check if this is a DLSite game and auto-connect VPN if enabled
+                if (game_info.get('source') == 'DLSite' or game_info.get('dlsiteId')) and self.vpn_manager:
+                    vpn_result = asyncio.run(self.vpn_manager.auto_connect_for_dlsite())
+                    if not vpn_result.get('success') and not vpn_result.get('skipped') and not vpn_result.get('already_connected'):
+                        self.logger.warning(f"VPN auto-connect failed: {vpn_result.get('message')}")
                 
                 # Use asyncio.run for async function
                 result = asyncio.run(
@@ -203,13 +219,28 @@ class DustBackendServer:
         
         @self.app.route('/api/games/<int:game_id>/launch', methods=['POST'])
         def launch_game(game_id):
-            """Launch a specific game"""
+            """Launch a specific game with VPN check for DLSite games"""
             try:
                 if not self.game_manager:
                     return jsonify({
                         'success': False,
                         'message': 'Game manager not initialized'
                     }), 500
+                
+                # Get game info to check if it's a DLSite game
+                game_data = self.db_manager.get_game(game_id) if self.db_manager else None
+                
+                # Auto-connect VPN for DLSite games if enabled
+                if (game_data and 
+                    (game_data.get('source') == 'DLSite' or game_data.get('dlsiteId')) and 
+                    self.vpn_manager):
+                    
+                    vpn_result = asyncio.run(self.vpn_manager.auto_connect_for_dlsite())
+                    if not vpn_result.get('success') and not vpn_result.get('skipped') and not vpn_result.get('already_connected'):
+                        return jsonify({
+                            'success': False,
+                            'message': f'VPN connection required for DLSite games failed: {vpn_result.get("message")}'
+                        })
                 
                 result = self.game_manager.launch_game(game_id)
                 return jsonify(result)
@@ -263,13 +294,19 @@ class DustBackendServer:
         
         @self.app.route('/api/dlsite/info/<dlsite_id>', methods=['GET'])
         def get_dlsite_info(dlsite_id):
-            """Get game information from DLSite"""
+            """Get game information from DLSite with VPN support"""
             try:
                 if not self.dlsite_client:
                     return jsonify({
                         'success': False,
                         'message': 'DLSite client not initialized'
                     }), 500
+                
+                # Auto-connect VPN for DLSite access if enabled
+                if self.vpn_manager:
+                    vpn_result = asyncio.run(self.vpn_manager.auto_connect_for_dlsite())
+                    if not vpn_result.get('success') and not vpn_result.get('skipped') and not vpn_result.get('already_connected'):
+                        self.logger.warning(f"VPN auto-connect failed for DLSite access: {vpn_result.get('message')}")
                 
                 # Use asyncio.run for async function
                 result = asyncio.run(
@@ -297,6 +334,12 @@ class DustBackendServer:
                 folder_path = data.get('folderPath')
                 platform = data.get('platform', 'local')
                 
+                # Auto-connect VPN for DLSite imports if enabled
+                if platform.lower() == 'dlsite' and self.vpn_manager:
+                    vpn_result = asyncio.run(self.vpn_manager.auto_connect_for_dlsite())
+                    if not vpn_result.get('success') and not vpn_result.get('skipped') and not vpn_result.get('already_connected'):
+                        self.logger.warning(f"VPN auto-connect failed for DLSite import: {vpn_result.get('message')}")
+                
                 # Use asyncio.run for async function
                 result = asyncio.run(
                     self.game_manager.import_games_from_folder(folder_path, platform)
@@ -307,6 +350,180 @@ class DustBackendServer:
                 return jsonify({
                     'success': False,
                     'message': f'Error importing games: {str(e)}'
+                }), 500
+        
+        # ===== VPN ENDPOINTS =====
+        
+        @self.app.route('/api/vpn/status', methods=['GET'])
+        def get_vpn_status():
+            """Get current VPN connection status"""
+            try:
+                if not self.vpn_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'VPN manager not initialized'
+                    }), 500
+                
+                status = self.vpn_manager.get_status()
+                return jsonify({
+                    'success': True,
+                    'status': status
+                })
+            except Exception as e:
+                self.logger.error(f"Error getting VPN status: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Error getting VPN status: {str(e)}'
+                }), 500
+        
+        @self.app.route('/api/vpn/connect', methods=['POST'])
+        def connect_vpn():
+            """Connect to VPN using specified or default configuration"""
+            try:
+                if not self.vpn_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'VPN manager not initialized'
+                    }), 500
+                
+                data = request.get_json() or {}
+                config_file = data.get('configFile')
+                force_reconnect = data.get('forceReconnect', False)
+                
+                # Use asyncio.run for async function
+                result = asyncio.run(
+                    self.vpn_manager.connect(config_file, force_reconnect)
+                )
+                return jsonify(result)
+            except Exception as e:
+                self.logger.error(f"Error connecting VPN: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Error connecting VPN: {str(e)}'
+                }), 500
+        
+        @self.app.route('/api/vpn/disconnect', methods=['POST'])
+        def disconnect_vpn():
+            """Disconnect from VPN"""
+            try:
+                if not self.vpn_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'VPN manager not initialized'
+                    }), 500
+                
+                # Use asyncio.run for async function
+                result = asyncio.run(self.vpn_manager.disconnect())
+                return jsonify(result)
+            except Exception as e:
+                self.logger.error(f"Error disconnecting VPN: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Error disconnecting VPN: {str(e)}'
+                }), 500
+        
+        @self.app.route('/api/vpn/configs', methods=['GET'])
+        def get_vpn_configs():
+            """Get list of available VPN configuration files"""
+            try:
+                if not self.vpn_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'VPN manager not initialized'
+                    }), 500
+                
+                configs = self.vpn_manager.get_available_configs()
+                return jsonify({
+                    'success': True,
+                    'configs': configs,
+                    'count': len(configs)
+                })
+            except Exception as e:
+                self.logger.error(f"Error getting VPN configs: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Error getting VPN configs: {str(e)}'
+                }), 500
+        
+        @self.app.route('/api/vpn/settings', methods=['GET'])
+        def get_vpn_settings():
+            """Get VPN settings"""
+            try:
+                if not self.vpn_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'VPN manager not initialized'
+                    }), 500
+                
+                return jsonify({
+                    'success': True,
+                    'settings': {
+                        'auto_connect_dlsite': self.vpn_manager.auto_connect_dlsite,
+                        'current_config_file': self.vpn_manager.current_vpn_config_file,
+                        'config_dir': self.vpn_manager.config_dir
+                    }
+                })
+            except Exception as e:
+                self.logger.error(f"Error getting VPN settings: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Error getting VPN settings: {str(e)}'
+                }), 500
+        
+        @self.app.route('/api/vpn/settings', methods=['POST'])
+        def update_vpn_settings():
+            """Update VPN settings"""
+            try:
+                if not self.vpn_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'VPN manager not initialized'
+                    }), 500
+                
+                data = request.get_json()
+                
+                # Update auto-connect setting
+                if 'auto_connect_dlsite' in data:
+                    self.vpn_manager.set_auto_connect_dlsite(data['auto_connect_dlsite'])
+                
+                # Update default config file
+                if 'default_config_file' in data:
+                    self.vpn_manager.set_default_config(data['default_config_file'])
+                
+                return jsonify({
+                    'success': True,
+                    'message': 'VPN settings updated successfully'
+                })
+            except Exception as e:
+                self.logger.error(f"Error updating VPN settings: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Error updating VPN settings: {str(e)}'
+                }), 500
+        
+        @self.app.route('/api/vpn/toggle', methods=['POST'])
+        def toggle_vpn():
+            """Toggle VPN connection (connect if disconnected, disconnect if connected)"""
+            try:
+                if not self.vpn_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'VPN manager not initialized'
+                    }), 500
+                
+                if self.vpn_manager.is_connected:
+                    # Disconnect
+                    result = asyncio.run(self.vpn_manager.disconnect())
+                else:
+                    # Connect using default config
+                    result = asyncio.run(self.vpn_manager.connect())
+                
+                return jsonify(result)
+            except Exception as e:
+                self.logger.error(f"Error toggling VPN: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Error toggling VPN: {str(e)}'
                 }), 500
         
         # Add error handlers
@@ -324,13 +541,22 @@ class DustBackendServer:
                 'message': 'Internal server error'
             }), 500
     
+    async def cleanup(self):
+        """Cleanup all managers including VPN"""
+        try:
+            if self.vpn_manager:
+                await self.vpn_manager.cleanup()
+            self.logger.info("Backend cleanup completed")
+        except Exception as e:
+            self.logger.error(f"Error during cleanup: {e}")
+    
     def run(self):
-        """Start the Flask server"""
+        """Start the Flask server with VPN support"""
         if not self.initialize_managers():
             self.logger.error("Failed to initialize managers. Exiting.")
             return False
         
-        self.logger.info(f"Starting Dust Backend Server on {self.host}:{self.port}")
+        self.logger.info(f"Starting Dust Backend Server with VPN support on {self.host}:{self.port}")
         
         try:
             # Configure Flask logging
@@ -348,6 +574,12 @@ class DustBackendServer:
         except Exception as e:
             self.logger.error(f"Error starting server: {e}")
             return False
+        finally:
+            # Cleanup on shutdown
+            try:
+                asyncio.run(self.cleanup())
+            except Exception as e:
+                self.logger.error(f"Error during final cleanup: {e}")
         
         return True
 
@@ -356,7 +588,7 @@ def main():
     """Main entry point"""
     # Setup command line arguments
     import argparse
-    parser = argparse.ArgumentParser(description='Dust Game Manager Backend Server')
+    parser = argparse.ArgumentParser(description='Dust Game Manager Backend Server with VPN')
     parser.add_argument('--host', default='127.0.0.1', help='Host address')
     parser.add_argument('--port', type=int, default=5000, help='Port number')
     parser.add_argument('--debug', action='store_true', help='Enable debug mode')
@@ -375,6 +607,13 @@ def main():
         sys.exit(0 if success else 1)
     except KeyboardInterrupt:
         print("\nShutting down server...")
+        # Cleanup VPN connections on exit
+        try:
+            if hasattr(server, 'vpn_manager') and server.vpn_manager:
+                asyncio.run(server.vpn_manager.cleanup())
+                print("VPN connections cleaned up")
+        except Exception as e:
+            print(f"Error cleaning up VPN: {e}")
         sys.exit(0)
     except Exception as e:
         print(f"Fatal error: {e}")

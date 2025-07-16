@@ -479,3 +479,7 @@ data/dust_games.db
 backend/tests/test_setup.py
 backend/tests/quick_test.py
 update_version.py
+
+data/vpn/au772.nordvpn.com.tcp.ovpn
+vpn/au772.nordvpn.com.tcp.ovpn
+vpn_setup.py

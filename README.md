@@ -203,6 +203,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Electron**: For cross-platform desktop application framework
 - **SQLite**: For reliable local database storage
 
----
-
-**Version:** v0.2.0-dev | **Build Date:** 20250715 | **Author:** Link Darkshire

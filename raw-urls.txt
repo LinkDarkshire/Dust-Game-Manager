@@ -1,0 +1,54 @@
+# Dust Game Manager - Raw File URLs
+# Auto-generated file list for easy access
+# Repository: https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001
+
+## Root Files
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/README.md
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/diagnose.js
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/index.html
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/install_dependencies.bat
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/main.js
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/package.json
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/raw-urls.txt
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/renderer.js
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/setup_backend.py
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/start-debug.bat
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/start.bat
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/styles.css
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/update_version.py
+
+## backend/
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/requirements.txt
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/setup.py
+
+## backend/config/
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/config/app_config.py
+
+## backend/scripts/
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/scripts/main.py
+
+## backend/src/
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/src/__init__.py
+
+## backend/src/dust_game_manager.egg-info/
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/src/dust_game_manager.egg-info/SOURCES.txt
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/src/dust_game_manager.egg-info/dependency_links.txt
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/src/dust_game_manager.egg-info/entry_points.txt
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/src/dust_game_manager.egg-info/requires.txt
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/src/dust_game_manager.egg-info/top_level.txt
+
+## backend/src/modules/
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/src/modules/__init__.py
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/src/modules/database_manager.py
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/src/modules/file_manager.py
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/src/modules/game_manager.py
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/src/modules/logger_config.py
+
+## backend/src/platforms/
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/src/platforms/__init__.py
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/src/platforms/dlsite_client.py
+
+## backend/tests/
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/tests/quick_test.py
+https://raw.githubusercontent.com/LinkDarkshire/Dust-Game-Manager/DUST-0001/backend/tests/test_setup.py
+
