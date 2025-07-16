@@ -3,61 +3,52 @@
 A universal game management application with Python backend and Electron frontend for organizing, launching, and managing games across multiple platforms including DLSite, Steam, and Itch.io.
 
 ![Version](https://img.shields.io/badge/version-0.2.1--dev-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+![License](https://img.shields.io/badge/license-CC--BY--NC--4.0-green.svg)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)
 ![Node.js](https://img.shields.io/badge/node.js-16%2B-green.svg)
 
 **Current Version:** v0.2.1-dev (Build 20250715)  
 **Author:** Link Darkshire  
-**License:** MIT
+**License:** CC-BY-NC-4.0 (Creative Commons Attribution-NonCommercial 4.0)
 
 ## 🌟 Features
 
-### ✅ Core Features (v0.2.0)
+### ✅ Core Features
 - **Unified Game Library**: Manage games from multiple platforms in one place
-- **DLSite Integration**: Complete integration using dlsite-async library
-- **Centralized Data Management**: All data stored in unified `data/` directory
-- **Genre/WorkType Mapping**: Proper separation of game genres and content categories
-- **SQLite Database**: Robust local database storage with automatic schema management
+- **DLSite Integration**: Professional integration using dlsite-async library
+- **SQLite Database**: Robust local database storage
 - **dustgrain.json Support**: Maintains compatibility with existing game metadata
 - **Game Launching**: Direct game execution from the interface
 - **Automatic Scanning**: Detect and import games automatically
-- **Cover Art Download**: Automatic cover image fetching and caching from DLSite
-- **Unified Version Management**: Centralized version control across all components
+- **Cover Art Download**: Automatic cover image fetching from DLSite
 
 ### 🎯 Platform Support
-- ✅ **DLSite** (Complete - Maniax, Home, Books, etc.)
-  - Automatic metadata fetching
-  - Cover image downloading
-  - RJ/RE number detection
-  - Genre and tag extraction
-- 🔄 **Steam** (Planned for v0.3.0)
-- 🔄 **Itch.io** (Planned for v0.4.0)
+- ✅ **DLSite** (Maniax, Home, Books, etc.)
+- 🔄 **Steam** (Planned)
+- 🔄 **Itch.io** (Planned)
 - ✅ **Local Games** (Any executable)
 
 ### 🛠️ Technical Features
-- **Python Backend**: Modular backend with async DLSite integration
+- **Python Flask Backend**: RESTful API server
 - **Electron Frontend**: Cross-platform desktop application
-- **Centralized Configuration**: Unified path and version management
-- **Comprehensive Logging**: Full operation tracking with centralized logs
-- **Tag System**: Organize games with custom tags and metadata
-- **Play Time Tracking**: Monitor gaming habits (planned)
-- **Error Handling**: Robust error handling with fallback systems
-- **Cross-Platform**: Windows, macOS, and Linux support
+- **Comprehensive Logging**: Full operation tracking
+- **Tag System**: Organize games with custom tags
+- **Play Time Tracking**: Monitor gaming habits
+- **Multi-language Support**: English interface with extensible i18n
 
 ## 📋 System Requirements
 
 ### Minimum Requirements
-- **OS**: Windows 10/11, macOS 10.15+, or Linux (major distributions)
+- **OS**: Windows 10/11, macOS 10.15+, or Linux
 - **Python**: 3.9 or higher
-- **Node.js**: 16.0 or higher
+- **Node.js**: 18.0 or higher
 - **RAM**: 4 GB
-- **Storage**: 500 MB + space for game metadata and cover images
+- **Storage**: 500 MB + space for game metadata
 - **Internet**: Required for DLSite integration and cover downloads
 
 ### Recommended
 - **Python**: 3.11+
-- **Node.js**: 18.0+
+- **Node.js**: 20.0+
 - **RAM**: 8 GB
 - **SSD Storage**: For better performance
 
@@ -141,11 +132,11 @@ Dust-Game-Manager/
 
 ### Version 0.2.0 - DLSite Integration (Current)
 - [x] Complete DLSite platform support
-- [x] Enhanced metadata display
 - [x] Improved game detection
 - [x] Centralized data management
 - [x] Genre/WorkType field mapping
 - [x] Unified version management
+- [ ] Enhanced metadata display
 - [ ] UI refinements
 - [ ] Performance optimizations
 
@@ -189,7 +180,40 @@ npm run build
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International License**.
+
+### 📋 What this means:
+
+**✅ You CAN:**
+- Use the software for **personal, non-commercial purposes**
+- Share and redistribute the software
+- Modify and adapt the software
+- Create derivative works
+
+**❌ You CANNOT:**
+- Use the software for **commercial purposes** without explicit permission
+- Sell the software or charge for its use
+- Use it in commercial environments without authorization
+
+**📝 You MUST:**
+- Give appropriate credit to **Link Darkshire**
+- Provide a link to the original source
+- Indicate if changes were made
+- Include the license notice
+
+### 💼 Commercial Use
+
+For commercial licensing inquiries, please contact the author through the GitHub repository issues or discussions.
+
+**Commercial use includes but is not limited to:**
+- Selling the software or derivative works
+- Using in commercial environments
+- Incorporating into commercial products
+- Offering paid services based on this software
+
+---
+
+*For the complete license text, see the [LICENSE](LICENSE) file or visit [Creative Commons BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).*
 
 ## 🔗 Links
 
@@ -202,4 +226,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **dlsite-async**: For DLSite API integration
 - **Electron**: For cross-platform desktop application framework
 - **SQLite**: For reliable local database storage
-
