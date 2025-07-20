@@ -3251,36 +3251,36 @@ class DustApp {
 
 // VPN functionality extension for DustApp
 Object.assign(DustApp.prototype, {
-    
+
     /**
      * Initialize VPN functionality
      */
     async initVPN() {
         console.log('Initializing VPN functionality...');
-        
+
         // Get VPN UI elements from the existing sidebar
         this.vpnToggleBtn = document.getElementById('vpn-toggle-btn');
         this.vpnConfigBtn = document.getElementById('vpn-config-btn');
         this.vpnStatusLight = document.getElementById('vpn-status-light');
         this.vpnStatusText = document.getElementById('vpn-status-text');
-        
+
         if (!this.vpnToggleBtn || !this.vpnStatusLight || !this.vpnStatusText) {
             console.error('VPN UI elements not found in sidebar');
             return;
         }
-        
+
         // Setup event listeners for VPN controls
         this.setupVPNEventListeners();
-        
+
         // Initialize VPN status
         await this.updateVPNStatus();
-        
+
         // Start status monitoring
         this.startVPNMonitoring();
-        
+
         console.log('VPN functionality initialized successfully');
     },
-    
+
     /**
      * Setup VPN event listeners
      */
@@ -3291,17 +3291,17 @@ Object.assign(DustApp.prototype, {
                 await this.toggleVPN();
             });
         }
-        
+
         // VPN Config Button (Gear button)
         if (this.vpnConfigBtn) {
             this.vpnConfigBtn.addEventListener('click', async () => {
                 await this.showVPNConfigDialog();
             });
         }
-        
+
         console.log('VPN event listeners attached');
     },
-    
+
     /**
      * Toggle VPN connection
      */
@@ -3309,18 +3309,18 @@ Object.assign(DustApp.prototype, {
         try {
             console.log('Toggling VPN connection...');
             this.setVPNLoading(true);
-            
+
             const response = await this.apiRequest('/api/vpn/toggle', {
                 method: 'POST'
             });
-            
+
             if (response.success) {
                 this.showNotification(response.message, 'success');
                 await this.updateVPNStatus();
             } else {
                 this.showError(response.message || 'VPN toggle failed');
             }
-            
+
         } catch (error) {
             console.error('VPN toggle error:', error);
             this.showError('VPN error: ' + error.message);
@@ -3328,68 +3328,68 @@ Object.assign(DustApp.prototype, {
             this.setVPNLoading(false);
         }
     },
-    
+
     /**
      * Update VPN status display
      */
     async updateVPNStatus() {
         try {
             const response = await this.apiRequest('/api/vpn/status');
-            
+
             if (response.success) {
                 this.updateVPNUI(response.status);
                 this.vpnStatus = response.status;
             } else {
                 this.updateVPNUI({ connected: false });
             }
-            
+
         } catch (error) {
             console.error('VPN status error:', error);
             this.updateVPNUI({ connected: false });
         }
     },
-    
+
     /**
      * Update VPN UI elements
      */
     updateVPNUI(status) {
         const isConnected = status.connected;
-        
+
         // Update status light (red/green indicator)
         if (this.vpnStatusLight) {
-            this.vpnStatusLight.className = isConnected ? 
+            this.vpnStatusLight.className = isConnected ?
                 'status-light connected' : 'status-light disconnected';
         }
-        
+
         // Update status text  
         if (this.vpnStatusText) {
             this.vpnStatusText.textContent = isConnected ? 'Connected' : 'Disconnected';
         }
-        
+
         // Update toggle button
         if (this.vpnToggleBtn) {
             const span = this.vpnToggleBtn.querySelector('span');
             if (span) {
                 span.textContent = isConnected ? 'Disconnect VPN' : 'Connect VPN';
             }
-            
+
             // Update button styling
-            this.vpnToggleBtn.className = isConnected ? 
+            this.vpnToggleBtn.className = isConnected ?
                 'vpn-toggle-btn connected' : 'vpn-toggle-btn disconnected';
-                
+
             // Enable the button (it starts disabled in HTML)
             this.vpnToggleBtn.disabled = false;
         }
-        
+
         console.log(`VPN UI updated: ${isConnected ? 'Connected' : 'Disconnected'}`);
     },
-    
+
     /**
      * Set VPN loading state
      */
     setVPNLoading(loading) {
         if (!this.vpnToggleBtn) return;
-        
+
         if (loading) {
             this.vpnToggleBtn.disabled = true;
             const icon = this.vpnToggleBtn.querySelector('i');
@@ -3402,19 +3402,19 @@ Object.assign(DustApp.prototype, {
             if (icon) icon.className = 'fas fa-power-off';
         }
     },
-    
+
     /**
      * Show VPN configuration dialog
      */
     async showVPNConfigDialog() {
         try {
             console.log('Opening VPN configuration dialog...');
-            
+
             const [configs, settings] = await Promise.all([
                 this.getVPNConfigs(),
                 this.getVPNSettings()
             ]);
-            
+
             const modal = this.createModal('VPN Konfiguration', `
                 <div class="vpn-config-dialog">
                     <div class="vpn-config-section">
@@ -3480,13 +3480,13 @@ Object.assign(DustApp.prototype, {
                     </div>
                 </div>
             `);
-            
+
         } catch (error) {
             console.error('VPN config dialog error:', error);
             this.showError('Fehler beim Laden der VPN-Konfiguration');
         }
     },
-    
+
     /**
      * Get VPN configurations
      */
@@ -3499,7 +3499,7 @@ Object.assign(DustApp.prototype, {
             return [];
         }
     },
-    
+
     /**
      * Get VPN settings
      */
@@ -3512,7 +3512,7 @@ Object.assign(DustApp.prototype, {
             return {};
         }
     },
-    
+
     /**
      * Save VPN settings
      */
@@ -3520,37 +3520,37 @@ Object.assign(DustApp.prototype, {
         try {
             const autoConnect = document.getElementById('auto-connect-dlsite')?.checked || false;
             const defaultConfig = document.getElementById('default-vpn-config')?.value || null;
-            
+
             const settings = { auto_connect_dlsite: autoConnect };
             if (defaultConfig) {
                 settings.default_config_file = defaultConfig;
             }
-            
+
             const response = await this.apiRequest('/api/vpn/settings', {
                 method: 'POST',
                 body: JSON.stringify(settings)
             });
-            
+
             if (response.success) {
                 this.showNotification('VPN-Einstellungen gespeichert', 'success');
                 this.closeModal();
             } else {
                 this.showError('Fehler beim Speichern der VPN-Einstellungen');
             }
-            
+
         } catch (error) {
             console.error('Error saving VPN settings:', error);
             this.showError('Fehler beim Speichern der VPN-Einstellungen');
         }
     },
-    
+
     /**
      * Use specific VPN config
      */
     async useVPNConfig(configPath) {
         try {
             this.setVPNLoading(true);
-            
+
             const response = await this.apiRequest('/api/vpn/connect', {
                 method: 'POST',
                 body: JSON.stringify({
@@ -3558,7 +3558,7 @@ Object.assign(DustApp.prototype, {
                     forceReconnect: true
                 })
             });
-            
+
             if (response.success) {
                 this.showNotification('VPN verbunden', 'success');
                 this.closeModal();
@@ -3566,7 +3566,7 @@ Object.assign(DustApp.prototype, {
             } else {
                 this.showError('VPN-Verbindung fehlgeschlagen: ' + response.message);
             }
-            
+
         } catch (error) {
             console.error('Error using VPN config:', error);
             this.showError('VPN-Fehler');
@@ -3574,7 +3574,7 @@ Object.assign(DustApp.prototype, {
             this.setVPNLoading(false);
         }
     },
-    
+
     /**
      * Auto-connect VPN for DLSite games
      */
@@ -3583,26 +3583,26 @@ Object.assign(DustApp.prototype, {
         if (!game || !(game.source === 'DLSite' || game.dlsiteId)) {
             return true;
         }
-        
+
         // Check if already connected
         if (this.vpnStatus && this.vpnStatus.connected) {
             return true;
         }
-        
+
         // Check auto-connect setting
         const settings = await this.getVPNSettings();
         if (!settings.auto_connect_dlsite) {
             return true; // Continue without VPN
         }
-        
+
         // Auto-connect
         this.showNotification('VPN wird für DLSite-Spiel aktiviert...', 'info');
-        
+
         try {
             const response = await this.apiRequest('/api/vpn/connect', {
                 method: 'POST'
             });
-            
+
             if (response.success) {
                 this.showNotification('VPN für DLSite aktiviert', 'success');
                 await this.updateVPNStatus();
@@ -3616,7 +3616,7 @@ Object.assign(DustApp.prototype, {
             return false;
         }
     },
-    
+
     /**
      * Start VPN monitoring
      */
@@ -3625,10 +3625,10 @@ Object.assign(DustApp.prototype, {
         this.vpnMonitoringInterval = setInterval(async () => {
             await this.updateVPNStatus();
         }, 10000);
-        
+
         console.log('VPN status monitoring started');
     },
-    
+
     /**
      * Stop VPN monitoring  
      */
@@ -3638,45 +3638,89 @@ Object.assign(DustApp.prototype, {
             this.vpnMonitoringInterval = null;
         }
     },
-    
+
     /**
      * Cleanup VPN functionality
      */
     cleanupVPN() {
         this.stopVPNMonitoring();
         console.log('VPN functionality cleaned up');
+    },
+
+    // Füge Debug-Funktionen zur DustApp Klasse hinzu
+    async debugVPN() {
+        try {
+            const response = await fetch('http://127.0.0.1:5000/api/vpn/debug');
+            const data = await response.json();
+
+            if (data.success) {
+                this.showDebugResults(data.debug_info);
+            } else {
+                console.error('VPN Debug failed:', data.message);
+            }
+        } catch (error) {
+            console.error('Error debugging VPN:', error);
+        }
+    },
+
+    showDebugResults(debugInfo) {
+        const debugWindow = document.createElement('div');
+        debugWindow.className = 'debug-overlay';
+        debugWindow.innerHTML = `
+            <div class="debug-panel">
+                <h3>VPN Debug Information</h3>
+                <pre>${JSON.stringify(debugInfo, null, 2)}</pre>
+                <button onclick="this.parentElement.parentElement.remove()">Close</button>
+            </div>
+        `;
+        document.body.appendChild(debugWindow);
+    },
+
+    async testVPNConnectivity() {
+        try {
+            const response = await fetch('http://127.0.0.1:5000/api/vpn/test-connectivity', {
+                method: 'POST'
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                this.showConnectivityResults(data.test_results);
+            }
+        } catch (error) {
+            console.error('Error testing VPN connectivity:', error);
+        }
     }
 });
 
 // Override the original init method to include VPN initialization
 const originalDustAppInit = DustApp.prototype.init;
-DustApp.prototype.init = async function() {
+DustApp.prototype.init = async function () {
     // Call original init first
     await originalDustAppInit.call(this);
-    
+
     // Then initialize VPN
     await this.initVPN();
 };
 
 // Override game launching to include VPN check for DLSite games
 const originalLaunchGame = DustApp.prototype.launchGame;
-DustApp.prototype.launchGame = async function(gameId) {
+DustApp.prototype.launchGame = async function (gameId) {
     const game = this.games.find(g => g.id === gameId);
     if (game) {
         // Check if VPN should be auto-connected for DLSite games
         await this.autoConnectVPNForDLSite(game);
     }
-    
+
     // Call original launch method
     return await originalLaunchGame.call(this, gameId);
 };
 
 // Override DLSite info fetching to include VPN check
 const originalFetchDLSiteInfo = DustApp.prototype.fetchDLSiteInfoAndProceed;
-DustApp.prototype.fetchDLSiteInfoAndProceed = async function(dlsiteId, executablePath) {
+DustApp.prototype.fetchDLSiteInfoAndProceed = async function (dlsiteId, executablePath) {
     // Auto-connect VPN for DLSite info fetching
     await this.autoConnectVPNForDLSite({ source: 'DLSite' });
-    
+
     // Call original method
     return await originalFetchDLSiteInfo.call(this, dlsiteId, executablePath);
 };

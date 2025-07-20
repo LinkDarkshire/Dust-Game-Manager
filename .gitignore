@@ -484,3 +484,5 @@ data/vpn/au772.nordvpn.com.tcp.ovpn
 vpn/au772.nordvpn.com.tcp.ovpn
 vpn_setup.py
 vpn/vpn_settings.json
+vpn_diagnostic.py
+vpn_diagnostic_results.json

@@ -845,3 +845,191 @@ class DLSiteClient:
         if self.play_client:
             await self.play_client.close()
             self.play_client = None
+            
+    async def test_dlsite_connectivity(self, vpn_manager=None) -> Dict[str, Any]:
+        """
+        Test DLSite connectivity with optional VPN verification
+        
+        Args:
+            vpn_manager: VPN manager instance for connectivity verification
+            
+        Returns:
+            Dict: Test results including connectivity status and details
+        """
+        try:
+            self.logger.info("Testing DLSite connectivity...")
+            
+            import aiohttp
+            import time
+            
+            test_results = {
+                'success': False,
+                'vpn_required': False,
+                'vpn_working': False,
+                'dlsite_accessible': False,
+                'test_details': {},
+                'error_message': None
+            }
+            
+            # Test 1: Basic connectivity to DLSite
+            dlsite_accessible = await self._test_dlsite_basic_access()
+            test_results['dlsite_accessible'] = dlsite_accessible
+            test_results['test_details']['basic_access'] = dlsite_accessible
+            
+            # Test 2: Check if we can access DLSite Maniax (geo-restricted)
+            maniax_accessible = await self._test_dlsite_maniax_access()
+            test_results['test_details']['maniax_access'] = maniax_accessible
+            
+            # Test 3: Try to fetch a known game's information
+            api_working = await self._test_dlsite_api_access()
+            test_results['test_details']['api_access'] = api_working
+            
+            # Test 4: VPN verification if VPN manager provided
+            if vpn_manager:
+                vpn_status = vpn_manager.get_status()
+                test_results['vpn_working'] = vpn_status.get('connected', False)
+                
+                # If VPN is connected, verify it's actually working
+                if test_results['vpn_working']:
+                    vpn_effective = await self._verify_vpn_effectiveness(vpn_manager)
+                    test_results['vpn_working'] = vpn_effective
+                    test_results['test_details']['vpn_effective'] = vpn_effective
+            
+            # Determine if VPN is required based on test results
+            test_results['vpn_required'] = not maniax_accessible and not api_working
+            
+            # Overall success criteria
+            if test_results['vpn_required']:
+                # VPN is required - success only if VPN is working AND DLSite is accessible
+                test_results['success'] = test_results['vpn_working'] and (dlsite_accessible or api_working)
+                if not test_results['success']:
+                    if not test_results['vpn_working']:
+                        test_results['error_message'] = "VPN connection required but not working properly"
+                    else:
+                        test_results['error_message'] = "VPN connected but DLSite still not accessible"
+            else:
+                # No VPN required - success if basic access works
+                test_results['success'] = dlsite_accessible or api_working
+                if not test_results['success']:
+                    test_results['error_message'] = "Unable to access DLSite even without VPN restrictions"
+            
+            # Log detailed results
+            self.logger.info(f"DLSite connectivity test results:")
+            self.logger.info(f"  - Basic DLSite access: {dlsite_accessible}")
+            self.logger.info(f"  - Maniax access: {maniax_accessible}")
+            self.logger.info(f"  - API access: {api_working}")
+            self.logger.info(f"  - VPN required: {test_results['vpn_required']}")
+            self.logger.info(f"  - VPN working: {test_results['vpn_working']}")
+            self.logger.info(f"  - Overall success: {test_results['success']}")
+            
+            if test_results['error_message']:
+                self.logger.warning(f"Test error: {test_results['error_message']}")
+            
+            return test_results
+            
+        except Exception as e:
+            self.logger.error(f"DLSite connectivity test failed: {e}")
+            return {
+                'success': False,
+                'vpn_required': True,  # Assume VPN needed on error
+                'vpn_working': False,
+                'dlsite_accessible': False,
+                'test_details': {'error': str(e)},
+                'error_message': f'Connectivity test failed: {str(e)}'
+            }
+
+    async def _test_dlsite_basic_access(self) -> bool:
+        """Test basic access to DLSite homepage"""
+        try:
+            import aiohttp
+            
+            timeout = aiohttp.ClientTimeout(total=15)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
+                async with session.get('https://www.dlsite.com') as response:
+                    success = response.status == 200
+                    if success:
+                        # Check if we got actual DLSite content, not a redirect or error page
+                        content = await response.text()
+                        success = 'dlsite' in content.lower() and 'google' not in content.lower()
+                    
+                    self.logger.debug(f"DLSite basic access test: HTTP {response.status}, Content valid: {success}")
+                    return success
+                    
+        except Exception as e:
+            self.logger.debug(f"DLSite basic access test failed: {e}")
+            return False
+
+    async def _test_dlsite_maniax_access(self) -> bool:
+        """Test access to DLSite Maniax (geo-restricted content)"""
+        try:
+            import aiohttp
+            
+            timeout = aiohttp.ClientTimeout(total=15)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
+                async with session.get('https://www.dlsite.com/maniax') as response:
+                    success = response.status == 200
+                    if success:
+                        content = await response.text()
+                        # Check for geo-restriction indicators
+                        geo_blocked = any(indicator in content.lower() for indicator in [
+                            'not available in your country',
+                            'geo-blocked',
+                            'region restricted',
+                            'access denied'
+                        ])
+                        success = not geo_blocked and 'maniax' in content.lower()
+                    
+                    self.logger.debug(f"DLSite Maniax access test: HTTP {response.status}, Accessible: {success}")
+                    return success
+                    
+        except Exception as e:
+            self.logger.debug(f"DLSite Maniax access test failed: {e}")
+            return False
+
+    async def _test_dlsite_api_access(self) -> bool:
+        """Test DLSite API access by trying to fetch info for a known game"""
+        try:
+            # Try to get info for a known DLSite game
+            test_id = "RJ01057876"  # A known public game ID
+            
+            self.logger.debug(f"Testing DLSite API access with ID: {test_id}")
+            
+            result = await self.get_game_info(test_id)
+            
+            success = result.get('success', False)
+            
+            self.logger.debug(f"DLSite API access test for {test_id}: {success}")
+            
+            if not success:
+                self.logger.debug(f"API test failure reason: {result.get('message', 'Unknown')}")
+            
+            return success
+            
+        except Exception as e:
+            self.logger.debug(f"DLSite API access test failed: {e}")
+            return False
+
+    async def _verify_vpn_effectiveness(self, vpn_manager) -> bool:
+        """Verify that VPN is actually changing our apparent location/IP"""
+        try:
+            # Check if public IP has changed
+            if hasattr(vpn_manager, '_original_public_ip'):
+                current_ip = await vpn_manager._get_public_ip()
+                if current_ip and current_ip != vpn_manager._original_public_ip:
+                    self.logger.debug(f"VPN effectiveness verified - IP changed from {vpn_manager._original_public_ip} to {current_ip}")
+                    return True
+            
+            # Alternative test: Check if we can access previously blocked content
+            return await self._test_dlsite_maniax_access()
+            
+        except Exception as e:
+            self.logger.debug(f"VPN effectiveness verification failed: {e}")
+            return False

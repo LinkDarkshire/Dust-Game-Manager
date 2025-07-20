@@ -139,7 +139,443 @@ class DustBackendServer:
                 'version': '0.2.0',
                 'vpn': vpn_status
             })
-        
+
+        @self.app.route('/api/vpn/debug-advanced', methods=['GET'])
+        def debug_vpn_advanced():
+            """Advanced VPN debugging using openvpn-api"""
+            try:
+                if not self.vpn_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'VPN manager not initialized'
+                    }), 500
+                
+                # Get comprehensive debug information
+                debug_info = self.vpn_manager.debug_current_state()
+                
+                # Add additional API-specific information
+                additional_info = {}
+                
+                if self.vpn_manager.vpn_api:
+                    try:
+                        # Get detailed VPN information using openvpn-api
+                        vpn_info = {}
+                        
+                        # Try to get version info
+                        try:
+                            vpn_info['version'] = str(self.vpn_manager.vpn_api.version)
+                        except:
+                            vpn_info['version'] = 'Unknown'
+                        
+                        # Try to get release info
+                        try:
+                            vpn_info['release'] = str(self.vpn_manager.vpn_api.release)
+                        except:
+                            vpn_info['release'] = 'Unknown'
+                        
+                        # Try to get state details
+                        try:
+                            state = self.vpn_manager.vpn_api.state
+                            vpn_info['state_details'] = {
+                                'state': str(state.state) if hasattr(state, 'state') else 'Unknown',
+                                'description': str(state.state_name) if hasattr(state, 'state_name') else 'Unknown',
+                                'local_virtual_v4_addr': str(state.local_virtual_v4_addr) if hasattr(state, 'local_virtual_v4_addr') else None,
+                                'remote_addr': str(state.remote_addr) if hasattr(state, 'remote_addr') else None,
+                                'local_addr': str(state.local_addr) if hasattr(state, 'local_addr') else None
+                            }
+                        except Exception as e:
+                            vpn_info['state_error'] = str(e)
+                        
+                        # Try to get status information
+                        try:
+                            status = self.vpn_manager.vpn_api.get_status()
+                            vpn_info['status_available'] = True
+                            vpn_info['status_type'] = str(type(status))
+                        except Exception as e:
+                            vpn_info['status_available'] = False
+                            vpn_info['status_error'] = str(e)
+                        
+                        additional_info['openvpn_api_info'] = vpn_info
+                        
+                    except Exception as e:
+                        additional_info['openvpn_api_error'] = str(e)
+                
+                # Test connectivity
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                try:
+                    # Get current public IP
+                    current_ip = loop.run_until_complete(self.vpn_manager._get_public_ip())
+                    additional_info['current_public_ip'] = current_ip
+                    additional_info['original_public_ip'] = getattr(self.vpn_manager, '_original_public_ip', None)
+                    additional_info['ip_changed'] = (
+                        current_ip != additional_info['original_public_ip'] 
+                        if current_ip and additional_info['original_public_ip'] 
+                        else False
+                    )
+                finally:
+                    loop.close()
+                
+                return jsonify({
+                    'success': True,
+                    'debug_info': debug_info,
+                    'additional_info': additional_info,
+                    'timestamp': datetime.now().isoformat()
+                })
+                
+            except Exception as e:
+                self.logger.error(f"Error in advanced VPN debug: {e}")
+                import traceback
+                return jsonify({
+                    'success': False,
+                    'message': f'Debug error: {str(e)}',
+                    'traceback': traceback.format_exc()
+                }), 500
+
+        @self.app.route('/api/vpn/quick-test', methods=['POST'])
+        def quick_vpn_test():
+            """Quick VPN connection test using openvpn-api"""
+            try:
+                if not self.vpn_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'VPN manager not initialized'
+                    }), 500
+                
+                # Run quick connection test
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                try:
+                    test_results = loop.run_until_complete(
+                        self.vpn_manager.quick_connection_test()
+                    )
+                    
+                    return jsonify({
+                        'success': True,
+                        'test_results': test_results
+                    })
+                    
+                finally:
+                    loop.close()
+                    
+            except Exception as e:
+                self.logger.error(f"Error in quick VPN test: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Quick test error: {str(e)}'
+                }), 500
+
+        @self.app.route('/api/vpn/connection-info', methods=['GET'])
+        def get_vpn_connection_info():
+            """Get detailed VPN connection information using openvpn-api"""
+            try:
+                if not self.vpn_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'VPN manager not initialized'
+                    }), 500
+                
+                connection_info = {
+                    'basic_status': self.vpn_manager.get_status(),
+                    'api_available': self.vpn_manager.vpn_api is not None,
+                    'detailed_info': {}
+                }
+                
+                if self.vpn_manager.vpn_api and self.vpn_manager.is_connected:
+                    try:
+                        # Get detailed connection information
+                        api = self.vpn_manager.vpn_api
+                        
+                        # Basic connection state
+                        state = api.state
+                        connection_info['detailed_info']['state'] = {
+                            'state': str(state.state) if hasattr(state, 'state') else 'Unknown',
+                            'state_name': str(state.state_name) if hasattr(state, 'state_name') else 'Unknown',
+                            'connected_since': str(state.connected_since) if hasattr(state, 'connected_since') else None
+                        }
+                        
+                        # Network information
+                        if hasattr(state, 'local_virtual_v4_addr'):
+                            connection_info['detailed_info']['network'] = {
+                                'local_virtual_ip': str(state.local_virtual_v4_addr),
+                                'remote_addr': str(state.remote_addr) if hasattr(state, 'remote_addr') else None,
+                                'local_addr': str(state.local_addr) if hasattr(state, 'local_addr') else None
+                            }
+                        
+                        # Try to get statistics if available
+                        try:
+                            status = api.get_status()
+                            if hasattr(status, 'routing_table'):
+                                connection_info['detailed_info']['routing'] = str(status.routing_table)
+                        except:
+                            pass
+                        
+                        # OpenVPN version info
+                        try:
+                            connection_info['detailed_info']['version'] = {
+                                'version': str(api.version),
+                                'release': str(api.release)
+                            }
+                        except:
+                            pass
+                        
+                    except Exception as e:
+                        connection_info['detailed_info']['error'] = str(e)
+                
+                return jsonify({
+                    'success': True,
+                    'connection_info': connection_info
+                })
+                
+            except Exception as e:
+                self.logger.error(f"Error getting VPN connection info: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Error getting connection info: {str(e)}'
+                }), 500
+
+        @self.app.route('/api/vpn/force-reconnect', methods=['POST'])
+        def force_vpn_reconnect():
+            """Force VPN reconnection with detailed logging"""
+            try:
+                if not self.vpn_manager:
+                    return jsonify({
+                        'success': False,
+                        'message': 'VPN manager not initialized'
+                    }), 500
+                
+                data = request.get_json() or {}
+                config_file = data.get('configFile')
+                
+                # Log current state before reconnection
+                pre_state = self.vpn_manager.debug_current_state()
+                
+                # Attempt forced reconnection
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                try:
+                    result = loop.run_until_complete(
+                        self.vpn_manager.connect(config_file, force_reconnect=True)
+                    )
+                    
+                    # Log state after reconnection attempt
+                    post_state = self.vpn_manager.debug_current_state()
+                    
+                    return jsonify({
+                        'success': result.get('success', False),
+                        'connection_result': result,
+                        'pre_state': pre_state,
+                        'post_state': post_state
+                    })
+                    
+                finally:
+                    loop.close()
+                    
+            except Exception as e:
+                self.logger.error(f"Error in force reconnect: {e}")
+                return jsonify({
+                    'success': False,
+                    'message': f'Force reconnect error: {str(e)}'
+                }), 500
+
+        async def quick_connection_test(self) -> Dict[str, Any]:
+            """
+            Quick test to attempt VPN connection with detailed logging using openvpn-api
+            
+            Returns:
+                Dict: Test results
+            """
+            test_results = {
+                'test_timestamp': datetime.now().isoformat(),
+                'pre_test_state': self.debug_current_state(),
+                'connection_attempt': {},
+                'post_test_state': {}
+            }
+            
+            try:
+                self.logger.info("=== Starting Quick VPN Connection Test (openvpn-api) ===")
+                
+                # Get original IP before connecting
+                original_ip = await self._get_public_ip()
+                test_results['connection_attempt']['original_ip'] = original_ip
+                
+                # Store as original if not set
+                if not self._original_public_ip:
+                    self._original_public_ip = original_ip
+                
+                # Check for available configs
+                if not self.current_vpn_config_file:
+                    available_configs = self.get_available_configs()
+                    if available_configs:
+                        self.current_vpn_config_file = available_configs[0]['path']
+                        self.logger.info(f"Using first available config: {self.current_vpn_config_file}")
+                    else:
+                        test_results['connection_attempt']['error'] = "No VPN configurations available"
+                        return test_results
+                
+                self.logger.info(f"Attempting connection with config: {self.current_vpn_config_file}")
+                
+                # Try to connect
+                connect_result = await self.connect(force_reconnect=True)
+                test_results['connection_attempt']['connect_result'] = connect_result
+                
+                if connect_result.get('success'):
+                    # Wait for connection to stabilize
+                    await asyncio.sleep(5)
+                    
+                    # Get new IP
+                    new_ip = await self._get_public_ip()
+                    test_results['connection_attempt']['new_ip'] = new_ip
+                    test_results['connection_attempt']['ip_changed'] = original_ip != new_ip if original_ip and new_ip else False
+                    
+                    # Test VPN API status
+                    if self.vpn_api:
+                        try:
+                            state = self.vpn_api.state
+                            test_results['connection_attempt']['api_state'] = str(state.state) if hasattr(state, 'state') else 'Unknown'
+                            
+                            if hasattr(state, 'local_virtual_v4_addr'):
+                                test_results['connection_attempt']['virtual_ip'] = str(state.local_virtual_v4_addr)
+                                
+                        except Exception as e:
+                            test_results['connection_attempt']['api_error'] = str(e)
+                    
+                    # Test basic connectivity
+                    basic_connectivity = await self._test_basic_connectivity()
+                    test_results['connection_attempt']['basic_connectivity'] = basic_connectivity
+                    
+                    # Test DLSite access specifically
+                    dlsite_accessible = await self._test_dlsite_access()
+                    test_results['connection_attempt']['dlsite_access'] = dlsite_accessible
+                
+                # Get final state
+                test_results['post_test_state'] = self.debug_current_state()
+                
+                self.logger.info("=== Quick VPN Connection Test Complete ===")
+                
+            except Exception as e:
+                test_results['connection_attempt']['exception'] = str(e)
+                import traceback
+                test_results['connection_attempt']['traceback'] = traceback.format_exc()
+                self.logger.error(f"Quick connection test failed: {e}")
+            
+            return test_results
+
+        async def _test_basic_connectivity(self) -> Dict[str, Any]:
+            """Basic connectivity tests"""
+            tests = {
+                'google': False,
+                'httpbin': False,
+                'ip_info': {}
+            }
+            
+            import aiohttp
+            timeout = aiohttp.ClientTimeout(total=10)
+            
+            # Test Google
+            try:
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.get('https://www.google.com') as response:
+                        tests['google'] = response.status == 200
+            except:
+                pass
+            
+            # Test HTTPBin (shows our IP)
+            try:
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.get('https://httpbin.org/ip') as response:
+                        if response.status == 200:
+                            tests['httpbin'] = True
+                            ip_data = await response.json()
+                            tests['ip_info'] = ip_data
+            except:
+                pass
+            
+            return tests
+
+        async def _test_dlsite_access(self) -> Dict[str, Any]:
+            """Test DLSite access specifically"""
+            tests = {
+                'dlsite_home': False,
+                'dlsite_maniax': False,
+                'geo_blocked': False
+            }
+            
+            import aiohttp
+            timeout = aiohttp.ClientTimeout(total=15)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            # Test DLSite main site
+            try:
+                async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
+                    async with session.get('https://www.dlsite.com') as response:
+                        if response.status == 200:
+                            tests['dlsite_home'] = True
+                            content = await response.text()
+                            # Check for geo-blocking indicators
+                            if any(indicator in content.lower() for indicator in [
+                                'not available in your country',
+                                'geo-blocked',
+                                'region restricted'
+                            ]):
+                                tests['geo_blocked'] = True
+            except:
+                pass
+            
+            # Test DLSite Maniax (adult section - often geo-restricted)
+            try:
+                async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
+                    async with session.get('https://www.dlsite.com/maniax') as response:
+                        tests['dlsite_maniax'] = response.status == 200
+            except:
+                pass
+            
+            return tests       
+
+        def _get_network_debug_info():
+            """Get network debugging information"""
+            try:
+                import subprocess
+                import platform
+                
+                network_info = {
+                    'platform': platform.system(),
+                    'interfaces': {},
+                    'routes': {},
+                    'dns': {}
+                }
+                
+                # Get network interfaces
+                try:
+                    if platform.system() == 'Windows':
+                        result = subprocess.run(['ipconfig', '/all'], capture_output=True, text=True, timeout=10)
+                        network_info['interfaces']['ipconfig'] = result.stdout if result.returncode == 0 else result.stderr
+                    else:
+                        result = subprocess.run(['ifconfig'], capture_output=True, text=True, timeout=10)
+                        network_info['interfaces']['ifconfig'] = result.stdout if result.returncode == 0 else result.stderr
+                except Exception as e:
+                    network_info['interfaces']['error'] = str(e)
+                
+                # Get routing table
+                try:
+                    if platform.system() == 'Windows':
+                        result = subprocess.run(['route', 'print'], capture_output=True, text=True, timeout=10)
+                        network_info['routes']['route_print'] = result.stdout if result.returncode == 0 else result.stderr
+                    else:
+                        result = subprocess.run(['route', '-n'], capture_output=True, text=True, timeout=10)
+                        network_info['routes']['route_n'] = result.stdout if result.returncode == 0 else result.stderr
+                except Exception as e:
+                    network_info['routes']['error'] = str(e)
+                
+                return network_info
+                
+            except Exception as e:
+                return {'error': str(e)}
         @self.app.route('/api/games', methods=['GET'])
         def get_games():
             """Get all games from database"""
@@ -618,6 +1054,7 @@ def main():
     except Exception as e:
         print(f"Fatal error: {e}")
         sys.exit(1)
+            
 
 
 if __name__ == '__main__':
