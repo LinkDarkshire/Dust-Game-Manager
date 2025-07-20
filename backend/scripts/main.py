@@ -9,6 +9,8 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Dict, List, Optional, Any
+from datetime import datetime
 
 # Add src directory to Python path for imports
 backend_dir = Path(__file__).parent.parent  # Go up from scripts/ to backend/

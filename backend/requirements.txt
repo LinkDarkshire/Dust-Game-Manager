@@ -15,10 +15,8 @@ psutil>=5.9.0          # For process monitoring and management
 python-openvpn>=0.1.0  # OpenVPN Python library (if available)
 asyncio-subprocess>=0.1.0  # Enhanced subprocess support for async operations
 
-# Alternative VPN management libraries (choose one that works best)
-openvpn-api>=0.3.0   # Alternative OpenVPN management library
-# pexpect>=4.8.0       # For interactive process management on Unix systems
-# pywin32>=306         # For Windows-specific process management (Windows only)
+# VPN management libraries (choose one that works best)
+openvpn-api>=0.3.0   # OpenVPN management library
 
 # Enhanced logging and monitoring
 watchdog>=3.0.0        # File system monitoring for config changes
