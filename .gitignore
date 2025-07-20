@@ -486,3 +486,5 @@ vpn_setup.py
 vpn/vpn_settings.json
 vpn_diagnostic.py
 vpn_diagnostic_results.json
+test-backend-connection.js
+quick-fix.js

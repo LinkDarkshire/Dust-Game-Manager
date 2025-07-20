@@ -80,7 +80,7 @@ function startPythonBackend() {
 /**
  * Check if backend is ready
  */
-async function waitForBackend(maxAttempts = 30) {
+async function waitForBackend(maxAttempts = 10) {
     const fetch = require('node-fetch');
     
     console.log('Waiting for Python backend to be ready...');
@@ -88,7 +88,7 @@ async function waitForBackend(maxAttempts = 30) {
     for (let i = 0; i < maxAttempts; i++) {
         try {
             const response = await fetch(`http://127.0.0.1:${BACKEND_PORT}/api/status`, {
-                timeout: 2000 // 2 second timeout per request
+                timeout: 10000 // 2 second timeout per request
             });
             if (response.ok) {
                 console.log('Python backend is ready');
@@ -118,7 +118,7 @@ async function shutdownVPNConnections() {
         
         // First check if VPN is connected
         const statusResponse = await fetch(`http://127.0.0.1:${BACKEND_PORT}/api/vpn/status`, {
-            timeout: 3000
+            timeout: 10000
         });
         
         if (statusResponse.ok) {
@@ -335,7 +335,7 @@ ipcMain.handle('backend-status', async () => {
     try {
         const fetch = require('node-fetch');
         const response = await fetch(`http://127.0.0.1:${BACKEND_PORT}/api/status`, {
-            timeout: 2000
+            timeout: 10000
         });
         const isReady = response.ok;
         console.log(`Backend status check: ${isReady ? 'Ready' : 'Not ready'}`);
@@ -351,7 +351,7 @@ ipcMain.handle('vpn-status', async () => {
     try {
         const fetch = require('node-fetch');
         const response = await fetch(`http://127.0.0.1:${BACKEND_PORT}/api/vpn/status`, {
-            timeout: 3000
+            timeout: 10000
         });
         
         if (response.ok) {
